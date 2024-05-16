@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	// "fmt"
 	"image/color"
 	_ "image/jpeg"
 	"log"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
@@ -18,7 +19,7 @@ const (
 	defaultCanvasHeight = 8
 )
 
-var defaultDrawColor = color.RGBA{255, 255, 255, 255}
+var defaultDrawColor = strghtToPre(color.RGBA{255, 255, 255, 255})
 
 type Vec2i struct {
 	x int
@@ -28,6 +29,7 @@ type Vec2i struct {
 type App struct {
 	screen     *ebiten.Image
 	canvas     *ebiten.Image
+	canvasScale float32
 	pixels     map[Vec2i]color.Color
 	background *ebiten.Image
 }
@@ -76,6 +78,19 @@ func setDefaultPixels(pixels *map[Vec2i]color.Color, canvasWidth int, canvasHeig
 	}
 }
 
+func strghtToPre(c color.Color) color.RGBA {
+	r, g, b, a := c.RGBA()
+    if a == 0 {
+        return color.RGBA{}
+    }
+    return color.RGBA{
+        R: uint8((r * 0xffff) / a),
+        G: uint8((g * 0xffff) / a),
+        B: uint8((b * 0xffff) / a),
+        A: uint8(a >> 8),
+    }
+}
+
 func (app *App) Update() error {
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && app.screen != nil {
 		x, y := ebiten.CursorPosition()
@@ -83,7 +98,16 @@ func (app *App) Update() error {
 	}
 	if ebiten.IsMouseButtonPressed(ebiten.MouseButton2) && app.screen != nil {
 		x, y := ebiten.CursorPosition()
-		setPixelAtPosition(x, y, color.RGBA{255, 0, 0, 255}, &app.pixels, app.screen.Bounds().Dx(), app.screen.Bounds().Dy(), app.canvas.Bounds().Dx(), app.canvas.Bounds().Dy())
+		setPixelAtPosition(x, y, strghtToPre(color.RGBA{0, 0, 0, 0}), &app.pixels, app.screen.Bounds().Dx(), app.screen.Bounds().Dy(), app.canvas.Bounds().Dx(), app.canvas.Bounds().Dy())
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyControlLeft) {
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
+			app.canvasScale += 0.1
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
+			app.canvasScale -= 0.1
+		}
 	}
 
 	return nil
@@ -94,7 +118,7 @@ func (app *App) Draw(screen *ebiten.Image) {
 
 	{
 		bgGeo := ebiten.GeoM{}
-		bgGeo.Scale(float64(screen.Bounds().Dx()) / float64(app.background.Bounds().Dx()), float64(screen.Bounds().Dy()) / float64(app.background.Bounds().Dy()))
+		bgGeo.Scale(float64(screen.Bounds().Dx())/float64(app.background.Bounds().Dx()), float64(screen.Bounds().Dy())/float64(app.background.Bounds().Dy()))
 		screen.DrawImage(app.background, &ebiten.DrawImageOptions{GeoM: bgGeo})
 	}
 
@@ -103,16 +127,20 @@ func (app *App) Draw(screen *ebiten.Image) {
 
 	{
 		x, y := ebiten.CursorPosition()
-		vector.DrawFilledCircle(screen, float32(x), float32(y), 10, color.RGBA{255, 0, 0, 255}, false)
+		vector.DrawFilledCircle(screen, float32(x), float32(y), 10, strghtToPre(color.RGBA{255, 0, 0, 255}), false)
 	}
 
+	app.canvas.Clear()
+
+	vector.DrawFilledRect(app.canvas, 0, 0, float32(app.canvas.Bounds().Dx()), float32(app.screen.Bounds().Dy()), color.RGBA{0,0,0,255}, false)
 	for i := range app.pixels {
 		vector.DrawFilledRect(app.canvas, float32(i.x), float32(i.y), 1, 1, app.pixels[i], false)
 	}
 
 	{
 		canvasGeo := ebiten.GeoM{}
-		canvasGeo.Scale(float64(screen.Bounds().Dx()) / float64(cw), float64(screen.Bounds().Dy()) / float64(ch))
+		canvasGeo.Scale(float64(screen.Bounds().Dx())/float64(cw), float64(screen.Bounds().Dy())/float64(ch))
+		canvasGeo.Scale(float64(app.canvasScale), float64(app.canvasScale))
 		screen.DrawImage(app.canvas, &ebiten.DrawImageOptions{GeoM: canvasGeo})
 	}
 
@@ -133,18 +161,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	img := ebiten.NewImage(defaultCanvasWidth, defaultCanvasHeight)
+	canvasImg := ebiten.NewImage(defaultCanvasWidth, defaultCanvasHeight)
 
 	app := App{
 		nil,
-		img,
+		canvasImg,
+		1,
 		make(map[Vec2i]color.Color, defaultCanvasWidth*defaultCanvasHeight),
 		background,
 	}
 
-
 	setDefaultPixels(&app.pixels, defaultCanvasWidth, defaultCanvasHeight, color.RGBA{0, 0, 0, 0})
-
 
 	if err := ebiten.RunGame(&app); err != nil {
 		log.Fatal(err)
