@@ -1,179 +1,166 @@
 package main
 
 import (
-	// "fmt"
+	"image"
 	"image/color"
-	_ "image/jpeg"
-	"log"
-	"math"
+	"time"
 
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"math/rand"
 
-	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/driver/desktop"
+
+	"fyne.io/fyne/v2/widget"
 )
 
-const (
-	defaultCanvasWidth  = 8
-	defaultCanvasHeight = 8
-)
+func getPixelData(img image.Image) *image.RGBA {
+	rgba := image.NewRGBA(img.Bounds())
 
-var defaultDrawColor = strghtToPre(color.RGBA{255, 255, 255, 255})
+	for y := 0; y < img.Bounds().Dx(); y++ {
+		for x := 0; x < img.Bounds().Dy(); x++ {
+			c := img.At(x, y)
+			rgba.Set(x, y, c)
+		}
+	}
 
-type Vec2i struct {
-	x int
-	y int
+	return rgba
 }
 
-type App struct {
-	screen     *ebiten.Image
-	canvas     *ebiten.Image
-	canvasScale float32
-	pixels     map[Vec2i]color.Color
-	background *ebiten.Image
+type clickableImage struct {
+	widget.BaseWidget
+	img *canvas.Image
+	pressed bool
 }
 
-func screenToCanvasPosition(x int, y int, screenWidth int, screenHeight int, canvasWidth int, canvasHeight int) (int, int) {
-	pixelWidth := float64(screenWidth) / float64(canvasWidth)
-	pixelHeight := float64(screenHeight) / float64(canvasHeight)
-
-	x = int(math.Round((float64(x) - pixelWidth/2) / float64(screenWidth) * float64(canvasWidth)))
-	y = int(math.Round((float64(y) - pixelHeight/2) / float64(screenHeight) * float64(canvasHeight)))
-	return x, y
+func newClickableImage(img *canvas.Image) *clickableImage {
+	c := &clickableImage{img: img}
+	c.ExtendBaseWidget(c)
+	return c
 }
 
-// func canvasToScreenPosition(x int, y int, canvasWidth int, canvasHeight int, screenWidth int, screenHeight int) (int, int) {
-// 	x = int(math.Round(float64(x) / float64(canvasWidth) * float64(screenWidth)))
-// 	y = int(math.Round(float64(y) / float64(canvasHeight) * float64(screenHeight)))
-// 	return x, y
+func (d *clickableImage) MouseDown(e *desktop.MouseEvent) {
+	d.pressed = true
+
+	pixelPosX := int(e.Position.X / d.Size().Width * float32(d.img.Image.Bounds().Dx()))
+	pixelPosY := int(e.Position.Y / d.Size().Height * float32(d.img.Image.Bounds().Dy()))
+
+	rgbaImg := getPixelData(d.img.Image)
+	rgbaImg.Set(pixelPosX, pixelPosY, color.RGBA{255, 255, 255, 255})
+	d.img.Image = rgbaImg
+	d.img.Refresh()
+
+}
+
+func (d *clickableImage) MouseUp(e *desktop.MouseEvent) {
+	d.pressed = false
+}
+
+func (d *clickableImage) MouseMoved(e *desktop.MouseEvent) {
+	if (!d.pressed) {
+		return
+	}
+
+	pixelPosX := int(e.Position.X / d.Size().Width * float32(d.img.Image.Bounds().Dx()))
+	pixelPosY := int(e.Position.Y / d.Size().Height * float32(d.img.Image.Bounds().Dy()))
+
+	rgbaImg := getPixelData(d.img.Image)
+	rgbaImg.Set(pixelPosX, pixelPosY, color.RGBA{255, 255, 255, 255})
+	d.img.Image = rgbaImg
+	d.img.Refresh()
+}
+
+func (d *clickableImage) MouseIn(*desktop.MouseEvent) {}
+
+func (d *clickableImage) MouseOut() {
+	d.pressed = false
+}
+
+func (c *clickableImage) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(c.img)
+}
+
+// func (c *clickableImage) MinSize() fyne.Size {
+//     // return c.img.Size()
+// 	fmt.Println(c.img.Size())
+// 	return fyne.NewSize(100, 100)
 // }
 
-func getPixelFromCursorPosition(pixels *map[Vec2i]color.Color, screenWidth int, screenHeight int, canvasWidth int, canvasHeight int) color.Color {
-	x, y := ebiten.CursorPosition()
-	x, y = screenToCanvasPosition(x, y, screenWidth, screenHeight, canvasWidth, canvasHeight)
-
-	color := (*pixels)[Vec2i{x, y}]
-	return color
-}
-
-func setPixelAtPosition(x int, y int, newColor color.Color, pixels *map[Vec2i]color.Color, screenWidth int, screenHeight int, canvasWidth int, canvasHeight int) (success bool) {
-	x, y = screenToCanvasPosition(x, y, screenWidth, screenHeight, canvasWidth, canvasHeight)
-	if x < 0 || y < 0 || x > canvasWidth-1 || y > canvasHeight-1 {
-		return false
-	}
-
-	(*pixels)[Vec2i{x, y}] = newColor
-	return true
-}
-
-func setDefaultPixels(pixels *map[Vec2i]color.Color, canvasWidth int, canvasHeight int, defaultColor color.Color) {
-	x, y := 0, -1
-	for i := 0; i < canvasWidth*canvasHeight; i++ {
-		x = i % canvasWidth
-		if x == 0 {
-			y += 1
-		}
-		(*pixels)[Vec2i{x, y}] = defaultColor
-	}
-}
-
-func strghtToPre(c color.Color) color.RGBA {
-	r, g, b, a := c.RGBA()
-    if a == 0 {
-        return color.RGBA{}
-    }
-    return color.RGBA{
-        R: uint8((r * 0xffff) / a),
-        G: uint8((g * 0xffff) / a),
-        B: uint8((b * 0xffff) / a),
-        A: uint8(a >> 8),
-    }
-}
-
-func (app *App) Update() error {
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButton0) && app.screen != nil {
-		x, y := ebiten.CursorPosition()
-		setPixelAtPosition(x, y, defaultDrawColor, &app.pixels, app.screen.Bounds().Dx(), app.screen.Bounds().Dy(), app.canvas.Bounds().Dx(), app.canvas.Bounds().Dy())
-	}
-	if ebiten.IsMouseButtonPressed(ebiten.MouseButton2) && app.screen != nil {
-		x, y := ebiten.CursorPosition()
-		setPixelAtPosition(x, y, strghtToPre(color.RGBA{0, 0, 0, 0}), &app.pixels, app.screen.Bounds().Dx(), app.screen.Bounds().Dy(), app.canvas.Bounds().Dx(), app.canvas.Bounds().Dy())
-	}
-
-	if ebiten.IsKeyPressed(ebiten.KeyControlLeft) {
-		if inpututil.IsKeyJustPressed(ebiten.KeyArrowUp) {
-			app.canvasScale += 0.1
-		}
-		if inpututil.IsKeyJustPressed(ebiten.KeyArrowDown) {
-			app.canvasScale -= 0.1
-		}
-	}
-
-	return nil
-}
-
-func (app *App) Draw(screen *ebiten.Image) {
-	app.screen = screen
-
-	{
-		bgGeo := ebiten.GeoM{}
-		bgGeo.Scale(float64(screen.Bounds().Dx())/float64(app.background.Bounds().Dx()), float64(screen.Bounds().Dy())/float64(app.background.Bounds().Dy()))
-		screen.DrawImage(app.background, &ebiten.DrawImageOptions{GeoM: bgGeo})
-	}
-
-	cw := app.canvas.Bounds().Dx()
-	ch := app.canvas.Bounds().Dy()
-
-	{
-		x, y := ebiten.CursorPosition()
-		vector.DrawFilledCircle(screen, float32(x), float32(y), 10, strghtToPre(color.RGBA{255, 0, 0, 255}), false)
-	}
-
-	app.canvas.Clear()
-
-	vector.DrawFilledRect(app.canvas, 0, 0, float32(app.canvas.Bounds().Dx()), float32(app.screen.Bounds().Dy()), color.RGBA{0,0,0,255}, false)
-	for i := range app.pixels {
-		vector.DrawFilledRect(app.canvas, float32(i.x), float32(i.y), 1, 1, app.pixels[i], false)
-	}
-
-	{
-		canvasGeo := ebiten.GeoM{}
-		canvasGeo.Scale(float64(screen.Bounds().Dx())/float64(cw), float64(screen.Bounds().Dy())/float64(ch))
-		canvasGeo.Scale(float64(app.canvasScale), float64(app.canvasScale))
-		screen.DrawImage(app.canvas, &ebiten.DrawImageOptions{GeoM: canvasGeo})
-	}
-
-	ebitenutil.DebugPrint(screen, "Hello, World!")
-}
-
-func (app *App) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320, 320
-}
-
 func main() {
-	ebiten.SetWindowSize(1280, 720)
-	ebiten.SetWindowTitle("Hello, World!")
-	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
+	myApp := app.New()
+	window := myApp.NewWindow("Pixel Click")
+	window.Resize(fyne.NewSize(640, 360))
 
-	background, _, err := ebitenutil.NewImageFromFile("test.jpeg")
-	if err != nil {
-		log.Fatal(err)
+	const (
+		defaultBoardWidth  = 8
+		defaultBoardHeight = 8
+	)
+
+	img := image.NewRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight))
+
+	for i, _ := range img.Pix {
+		img.Pix[i] = uint8(rand.Intn(255))
 	}
 
-	canvasImg := ebiten.NewImage(defaultCanvasWidth, defaultCanvasHeight)
+	imgObj := canvas.NewImageFromImage(img)
+	imgObj.ScaleMode = canvas.ImageScalePixels
 
-	app := App{
-		nil,
-		canvasImg,
-		1,
-		make(map[Vec2i]color.Color, defaultCanvasWidth*defaultCanvasHeight),
-		background,
-	}
+	clickableImg := newClickableImage(imgObj)
+	clickableImg.img.FillMode = canvas.ImageFillOriginal
 
-	setDefaultPixels(&app.pixels, defaultCanvasWidth, defaultCanvasHeight, color.RGBA{0, 0, 0, 0})
+	clickableImg.Resize(fyne.NewSize(300, 300))
 
-	if err := ebiten.RunGame(&app); err != nil {
-		log.Fatal(err)
-	}
+	cont := container.NewWithoutLayout(clickableImg)
+
+	go func() {
+		widthBefore := window.Content().Size().Width
+		heightBefore := window.Content().Size().Height
+		for {
+			width := window.Content().Size().Width
+			height := window.Content().Size().Height
+			if width != widthBefore || height != heightBefore {
+				clickableImg.Move(fyne.NewPos(
+					width/2-clickableImg.Size().Width/2,
+					height/2-clickableImg.Size().Height/2,
+				))
+			}
+			widthBefore = width
+			heightBefore = height
+			time.Sleep(20 * time.Millisecond) // you may want to change this
+		}
+	}()
+
+	window.SetContent(cont)
+	window.ShowAndRun()
 }
+
+// func main() {
+// 	myApp := app.New()
+// 	w := myApp.NewWindow("o")
+
+// 	const (
+// 		defaultBoardWidth  = 32
+// 		defaultBoardHeight = 32
+// 	)
+
+// 	img := image.NewRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight))
+
+// 	for i, _ := range img.Pix {
+// 		img.Pix[i] = uint8(rand.Intn(255))
+// 	}
+
+// 	img.Set(50, 50, color.RGBA{255, 0, 0, 255})
+// 	img.Set(60, 60, color.RGBA{0, 255, 0, 255})
+
+// 	fyneImage := canvas.NewImageFromImage(img)
+// 	fyneImage.FillMode = canvas.ImageFillOriginal
+// 	fyneImage.ScaleMode = canvas.ImageScalePixels
+
+// 	w.SetContent(fyneImage)
+
+// 	w.Resize(fyne.NewSize(120, 100))
+// 	w.ShowAndRun()
+// }
