@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
-	"math/rand"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -12,7 +10,7 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/driver/desktop"
-	"fyne.io/fyne/v2/theme"
+	"github.com/lusingander/colorpicker"
 )
 
 func getPixelData(img image.Image) *image.RGBA {
@@ -31,8 +29,7 @@ func getPixelData(img image.Image) *image.RGBA {
 var g_keysPressed = make(map[fyne.KeyName]bool)
 
 func main() {
-	myApp := app.New()
-	myApp.Settings().SetTheme(theme.DarkTheme())
+	myApp := app.NewWithID("smokep")
 	window := myApp.NewWindow("smokep")
 	window.Resize(fyne.NewSize(640, 360))
 
@@ -44,35 +41,28 @@ func main() {
 			delete(g_keysPressed, key.Name)
 		})
 	}
-
-	img := image.NewRGBA(image.Rect(0, 0, defaultBoardPixelWidth, defaultBoardPixelHeight))
-
-	for i := range img.Pix {
-		img.Pix[i] = uint8(rand.Intn(255))
-	}
-
-	imgObj := canvas.NewImageFromImage(img)
-	imgObj.ScaleMode = canvas.ImageScalePixels
-
-	pixelBoard := newPixelBoard(imgObj)
-	pixelBoard.img.FillMode = canvas.ImageFillOriginal
-	// pixelBoard.Zoom(0, fyne.NewPos(0, 0))
 	
-	pixelBoard.img.Resize(fyne.NewSize(defaultBoardWidth, defaultBoardHeight))
-
-	pixelBoardHolder := container.NewWithoutLayout(pixelBoard.img)
+	pixelBoard := newPixelBoard(canvas.NewImageFromFile("test.jpeg"))
+	pixelBoardHolder := container.NewWithoutLayout(pixelBoard.boardObj)
 	pixelBoardHolderCenterer := container.NewCenter(pixelBoardHolder)
-	pixelBoardContainerWidget := newPixelBoardContainerWidget(pixelBoardHolderCenterer, pixelBoard)
+	pixelBoardPanel := newPixelBoardContainerWidget(pixelBoardHolderCenterer, pixelBoard)
 
-	fmt.Println("e")
+	leftPanel := container.NewStack()
+	leftPanel.Add(canvas.NewRectangle(color.RGBA{255,0,0,255}))
+	
+	picker := colorpicker.New(200 /* height */, colorpicker.StyleHue /* Style */)
+	picker.SetOnChanged(func(c color.Color) {
+		pixelBoard.paintingColor = c
+	})
 
-	leftPanel := canvas.NewRectangle(color.RGBA{255, 0, 0, 255})
+	leftPanel.Add(picker)
+
 	rightPanel := canvas.NewRectangle(color.RGBA{0, 0, 255, 255})
 
-	cont := container.NewGridWithColumns(3)
-	cont.Add(leftPanel)
-	cont.Add(pixelBoardContainerWidget)
-	cont.Add(rightPanel)
+	mainPanels := container.NewGridWithColumns(3)
+	mainPanels.Add(leftPanel)
+	mainPanels.Add(pixelBoardPanel)
+	mainPanels.Add(rightPanel)
 
 	go func() {
 		for {
@@ -80,6 +70,6 @@ func main() {
 		}
 	}()
 
-	window.SetContent(cont)
+	window.SetContent(mainPanels)
 	window.ShowAndRun()
 }

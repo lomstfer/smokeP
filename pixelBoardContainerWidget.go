@@ -35,7 +35,8 @@ func (pbc *PixelBoardContainerWidget) MouseDown(e *desktop.MouseEvent) {
 		pbc.board.Paint(pbc.positionRelBoard(e.Position))
 	}
 	if e.Button == desktop.MouseButtonSecondary {
-		pbc.dragMouseStartPos = &e.AbsolutePosition
+		p := fyne.NewPos(e.AbsolutePosition.X, e.AbsolutePosition.Y)
+		pbc.dragMouseStartPos = &p
 	}
 }
 
@@ -67,7 +68,7 @@ func (pbc *PixelBoardContainerWidget) MouseOut() {
 }
 
 func (pbc *PixelBoardContainerWidget) positionRelBoard(position fyne.Position) fyne.Position {
-	boardPosition := pbc.board.img.Position().Add(fyne.NewSize(pbc.Size().Width/2, pbc.Size().Height/2)).Subtract(fyne.NewSize(defaultBoardPixelWidth/2, defaultBoardPixelHeight/2))
+	boardPosition := pbc.board.boardObj.Position().Add(fyne.NewSize(pbc.Size().Width/2, pbc.Size().Height/2)).Subtract(fyne.NewSize(defaultBoardPixelWidth/2, defaultBoardPixelHeight/2))
 	positionRelBoard := position.Subtract(boardPosition)
 	return positionRelBoard
 }
@@ -76,7 +77,7 @@ func (pbc *PixelBoardContainerWidget) isPositionOnBoard(position fyne.Position) 
 	positionRelBoard := pbc.positionRelBoard(position)
 
 	return positionRelBoard.X > 0 &&
-		positionRelBoard.X < pbc.board.img.Size().Width &&
+		positionRelBoard.X < pbc.board.boardObj.Size().Width &&
 		positionRelBoard.Y > 0 &&
-		positionRelBoard.Y < pbc.board.img.Size().Height
+		positionRelBoard.Y < pbc.board.boardObj.Size().Height
 }
