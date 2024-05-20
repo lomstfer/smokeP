@@ -55,7 +55,7 @@ func (pbc *PixelBoardContainerWidget) MouseMoved(e *desktop.MouseEvent) {
 		pbc.board.Paint(pbc.positionRelBoard(e.Position))
 	}
 	if e.Button == desktop.MouseButtonSecondary && pbc.dragMouseStartPos != nil {
-		pbc.board.updateMove(e.AbsolutePosition, *pbc.dragMouseStartPos)
+		pbc.board.updateDrag(e.AbsolutePosition, *pbc.dragMouseStartPos)
 	}
 }
 

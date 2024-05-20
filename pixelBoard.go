@@ -1,10 +1,10 @@
 package main
 
 import (
-	"math/rand"
 	"image"
 	"image/color"
 	"math"
+	"math/rand"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -17,9 +17,9 @@ type PixelBoard struct {
 	pixelImage     *canvas.Image
 	background     *canvas.Image
 	scaleFromZoom  float32
-	moveOffsetTemp fyne.Position
-	moveOffset     fyne.Position
-	paintingColor color.Color
+	positionOffsetDragTemp fyne.Position
+	positionOffset     fyne.Position
+	paintingColor  color.Color
 }
 
 func newPixelBoard(backgroundImage *canvas.Image) *PixelBoard {
@@ -29,6 +29,8 @@ func newPixelBoard(backgroundImage *canvas.Image) *PixelBoard {
 	}
 	pixelImageObj := canvas.NewImageFromImage(pixelImage)
 	pixelImageObj.ScaleMode = canvas.ImageScalePixels
+
+	backgroundImage.ScaleMode = canvas.ImageScalePixels
 
 	pb := &PixelBoard{
 		boardObj:      container.New(layout.NewStackLayout()),
@@ -41,8 +43,7 @@ func newPixelBoard(backgroundImage *canvas.Image) *PixelBoard {
 
 	pb.boardObj.Resize(fyne.NewSize(defaultBoardWidth, defaultBoardHeight))
 	pb.boardObj.Move(pb.getCenterDiff())
-
-	
+	pb.boardObj.Refresh()
 
 	return pb
 }
@@ -57,17 +58,18 @@ func (pb *PixelBoard) Paint(relativePosition fyne.Position) {
 	pb.pixelImage.Refresh()
 }
 
-func (pb *PixelBoard) updateMove(absMousePosition fyne.Position, mousePositionStart fyne.Position) {
-	pb.moveOffsetTemp = absMousePosition.Subtract(mousePositionStart)
+func (pb *PixelBoard) updateDrag(absMousePosition fyne.Position, mousePositionStart fyne.Position) {
+	pb.positionOffsetDragTemp = absMousePosition.Subtract(mousePositionStart)
 
-	newPos := pb.moveOffset.Add(pb.moveOffsetTemp).Add(pb.getCenterDiff())
+	newPos := pb.positionOffset.Add(pb.positionOffsetDragTemp).Add(pb.getCenterDiff())
 
 	pb.boardObj.Move(newPos)
+	pb.boardObj.Refresh()
 }
 
 func (pb *PixelBoard) endMove() {
-	pb.moveOffset = pb.moveOffset.Add(pb.moveOffsetTemp)
-	pb.moveOffsetTemp = fyne.NewPos(0, 0)
+	pb.positionOffset = pb.positionOffset.Add(pb.positionOffsetDragTemp)
+	pb.positionOffsetDragTemp = fyne.NewPos(0, 0)
 }
 
 func (pb *PixelBoard) Zoom(scrollY float32, mouseRelBoard fyne.Position) {
@@ -87,12 +89,13 @@ func (pb *PixelBoard) Zoom(scrollY float32, mouseRelBoard fyne.Position) {
 	ratioX := mouseRelBoard.X / float32(sizeBefore.Width)
 	ratioY := mouseRelBoard.Y / float32(sizeBefore.Height)
 
-	pb.moveOffset = pb.moveOffset.Add(fyne.NewPos(
+	pb.positionOffset = pb.positionOffset.Add(fyne.NewPos(
 		-ratioX*float32(sizeDiff.Width),
 		-ratioY*float32(sizeDiff.Height),
 	))
-	newPos := pb.moveOffset.Add(pb.moveOffsetTemp).Add(pb.getCenterDiff())
+	newPos := pb.positionOffset.Add(pb.positionOffsetDragTemp).Add(pb.getCenterDiff())
 	pb.boardObj.Move(newPos)
+	pb.boardObj.Refresh()
 }
 
 func (pb *PixelBoard) getCenterDiff() fyne.Position {
