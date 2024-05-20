@@ -1,4 +1,4 @@
-module smallp
+module smokep
 
 go 1.22.3
 
