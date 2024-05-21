@@ -22,6 +22,7 @@ type PixelBoard struct {
 	pixelImg *image.NRGBA
 	position f32.Point
 	scale    float32
+	drawingColor color.NRGBA
 }
 
 func newPixelBoard() *PixelBoard {
@@ -46,14 +47,15 @@ func (pb *PixelBoard) Layout(gtx layout.Context) layout.Dimensions {
 	posInt := image.Pt(pb.position.Round().X, pb.position.Round().Y)
 	r := image.Rect(posInt.X, posInt.Y, posInt.X+sizeInt.X, posInt.Y+sizeInt.Y)
 
-	imgOp := paint.NewImageOp(pb.pixelImg)
-	imgOp.Filter = paint.FilterNearest
-	imgOp.Add(gtx.Ops)
-
-	op.Affine(
-		f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(pb.position),
-	).Add(gtx.Ops)
-	paint.PaintOp{}.Add(gtx.Ops)
+    imgOp := paint.NewImageOp(pb.pixelImg)
+    imgOp.Filter = paint.FilterNearest
+    imgOp.Add(gtx.Ops)
+	
+    tStack := op.Affine(
+        f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(pb.position),
+    ).Push(gtx.Ops)
+    paint.PaintOp{}.Add(gtx.Ops)
+	tStack.Pop()
 
 	return layout.Dimensions{Size: image.Pt(r.Dx(), r.Dy())}
 }
@@ -67,7 +69,7 @@ func (pb *PixelBoard) CheckIfOnBoardAndDraw(mousePos f32.Point) {
 	if onBoard {
 		rel := mousePos.Sub(pb.position).Div(pb.scale)
 		pixelCoord := image.Pt(int(rel.X), int(rel.Y))
-		pb.pixelImg.SetNRGBA(pixelCoord.X, pixelCoord.Y, color.NRGBA{255, 255, 255, 255})
+		pb.pixelImg.SetNRGBA(pixelCoord.X, pixelCoord.Y, pb.drawingColor)
 	}
 }
 

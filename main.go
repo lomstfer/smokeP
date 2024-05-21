@@ -1,16 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"image"
-	"image/color"
 	"log"
 	"os"
 
 	"gioui.org/app"
 	"gioui.org/f32"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/text"
 	"gioui.org/widget/material"
 )
@@ -18,6 +16,8 @@ import (
 func main() {
 	go func() {
 		window := new(app.Window)
+		window.Option(app.Size(1280, 720))
+		
 		err := run(window)
 		if err != nil {
 			log.Fatal(err)
@@ -32,9 +32,9 @@ func run(window *app.Window) error {
 
 	var ops op.Ops
 
-	b := newEditingArea()
+	editingArea := newEditingArea()
 
-	app.Decorated(false)
+	colorPicker := newColorPicker(f32.Pt(0, 0), image.Pt(1280, 50))
 
 	for {
 		switch e := window.Event().(type) {
@@ -43,29 +43,19 @@ func run(window *app.Window) error {
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 
-			title := material.H1(theme, "smoke")
-			title.Color = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
+			
+			title := material.H1(theme, fmt.Sprintf("%v", colorPicker.chosenColor))
+			title.Color = colorPicker.chosenColor
 			title.Alignment = text.Middle
 			title.Layout(gtx)
 
-			grect := image.Rect(100, 100, 1000, 200)
-			paint.LinearGradientOp{
-				Stop1:  f32.Pt(float32(grect.Min.X), float32(grect.Min.Y)),
-				Stop2:  f32.Pt(float32(grect.Max.X - grect.Dx()/2), float32(grect.Max.Y)),
-				Color1: color.NRGBA{255, 0, 0, 255},
-				Color2: color.NRGBA{255, 255, 0, 255},
-			}.Add(gtx.Ops)
-			paint.LinearGradientOp{
-				Stop1:  f32.Pt(float32(grect.Min.X + grect.Dx()/2), float32(grect.Min.Y)),
-				Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Max.Y)),
-				Color1: color.NRGBA{255, 255, 0, 255},
-				Color2: color.NRGBA{0, 0, 255, 255},
-			}.Add(gtx.Ops)
-			garea := clip.Rect(grect).Push(gtx.Ops)
-			paint.PaintOp{}.Add(gtx.Ops)
-			garea.Pop()
+			editingArea.board.drawingColor = colorPicker.chosenColor
+			
+			editingArea.Layout(gtx)
 
-			b.Layout(gtx)
+			colorPicker.size.X = e.Size.X
+			colorPicker.position.Y = float32(e.Size.Y - colorPicker.size.Y)
+			colorPicker.Layout(gtx)
 
 			e.Frame(gtx.Ops)
 		}
