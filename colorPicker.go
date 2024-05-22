@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -13,11 +14,12 @@ import (
 )
 
 type ColorPicker struct {
-	position f32.Point
-	size     image.Point
-	colors   [9]color.NRGBA
-	partLength int
-	chosenColor color.NRGBA
+	position     f32.Point
+	size         image.Point
+	colors       [9]color.NRGBA
+	partLength   int
+	chosenColor  color.NRGBA
+	pickPosition *f32.Point
 }
 
 func newColorPicker(position f32.Point, size image.Point) *ColorPicker {
@@ -61,7 +63,7 @@ func (cp *ColorPicker) HandleInput(gtx layout.Context) {
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cp,
-			Kinds:        pointer.Move,
+			Kinds:        pointer.Drag,
 			ScrollBounds: image.Rect(-10, -10, 10, 10),
 		})
 		if !ok {
@@ -73,18 +75,43 @@ func (cp *ColorPicker) HandleInput(gtx layout.Context) {
 			continue
 		}
 
-		relX := e.Position.Sub(cp.position).Round().X
-		gradientNumber := relX / cp.partLength
-		if (gradientNumber < len(cp.colors) - 1) {
-			col1 := cp.colors[gradientNumber]
-			col2 := cp.colors[gradientNumber + 1]
-			gradientStride := float64(relX % cp.partLength) / float64(cp.partLength)
-			
-			cp.chosenColor = lerpColor(col1, col2, gradientStride)
+		cp.pickPosition = &e.Position
+
+		color := cp.getColorFromPosition(*cp.pickPosition)
+		if color != nil {
+			cp.chosenColor = *color
 		}
 	}
 
 	area.Pop()
+}
+
+func (cp *ColorPicker) DrawPick(mousePos f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
+	const size = 10
+	const sizeOuter = 13
+
+	roundedMPos := mousePos.Round()
+	fmt.Println(roundedMPos)
+	
+	{
+		y0 := cp.position.Round().Y + cp.size.Y/2 - sizeOuter
+		y1 := cp.position.Round().Y + cp.size.Y/2 + sizeOuter
+		r := image.Rect(roundedMPos.X-sizeOuter, y0, roundedMPos.X+sizeOuter, y1)
+		paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
+		a := clip.Ellipse(r).Push(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		a.Pop()
+	}
+	
+	{
+		y0 := cp.position.Round().Y + cp.size.Y/2 - size
+		y1 := cp.position.Round().Y + cp.size.Y/2 + size
+		r := image.Rect(roundedMPos.X-size, y0, roundedMPos.X+size, y1)
+		paint.ColorOp{Color: cp.chosenColor}.Add(gtx.Ops)
+		a := clip.Ellipse(r).Push(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		a.Pop()
+	}
 }
 
 func (cp *ColorPicker) Draw(gtx layout.Context) {
@@ -110,13 +137,34 @@ func (cp *ColorPicker) Draw(gtx layout.Context) {
 		startX += cp.partLength
 		endX += cp.partLength
 	}
+
+	if cp.pickPosition != nil {
+		col := cp.getColorFromPosition(*cp.pickPosition)
+		if col != nil {
+			cp.DrawPick(*cp.pickPosition, *col, gtx)
+		}
+	}
+}
+
+func (cp *ColorPicker) getColorFromPosition(pos f32.Point) *color.NRGBA {
+	relX := pos.Sub(cp.position).Round().X
+	gradientNumber := relX / cp.partLength
+	if gradientNumber >= 0 && gradientNumber < len(cp.colors)-1 {
+		col1 := cp.colors[gradientNumber]
+		col2 := cp.colors[gradientNumber+1]
+		gradientStride := float64(relX%cp.partLength) / float64(cp.partLength)
+		colorResult := lerpColor(col1, col2, gradientStride)
+		return &colorResult
+	}
+
+	return nil
 }
 
 func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
 	return color.NRGBA{
-		R: uint8(int(col1.R) + int(float64(int(col2.R) - int(col1.R)) * t)),
-		G: uint8(int(col1.G) + int(float64(int(col2.G) - int(col1.G)) * t)),
-		B: uint8(int(col1.B) + int(float64(int(col2.B) - int(col1.B)) * t)),
-		A: uint8(int(col1.A) + int(float64(int(col2.A) - int(col1.A)) * t)),
+		R: uint8(int(col1.R) + int(float64(int(col2.R)-int(col1.R))*t)),
+		G: uint8(int(col1.G) + int(float64(int(col2.G)-int(col1.G))*t)),
+		B: uint8(int(col1.B) + int(float64(int(col2.B)-int(col1.B))*t)),
+		A: uint8(int(col1.A) + int(float64(int(col2.A)-int(col1.A))*t)),
 	}
 }
