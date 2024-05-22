@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"gioui.org/app"
-	"gioui.org/f32"
+	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/text"
 	"gioui.org/widget/material"
@@ -17,7 +17,7 @@ func main() {
 	go func() {
 		window := new(app.Window)
 		window.Option(app.Size(1280, 720))
-		
+
 		err := run(window)
 		if err != nil {
 			log.Fatal(err)
@@ -34,7 +34,7 @@ func run(window *app.Window) error {
 
 	editingArea := newEditingArea()
 
-	colorPicker := newColorPicker(f32.Pt(0, 0), image.Pt(1280, 50))
+	colorPicker := newColorPicker(image.Pt(0, 50))
 
 	for {
 		switch e := window.Event().(type) {
@@ -43,19 +43,20 @@ func run(window *app.Window) error {
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 
-			
-			title := material.H1(theme, fmt.Sprintf("%v", colorPicker.chosenColor))
-			title.Color = colorPicker.chosenColor
-			title.Alignment = text.Middle
-			title.Layout(gtx)
-
-			editingArea.board.drawingColor = colorPicker.chosenColor
-			
-			editingArea.Layout(gtx)
-
-			colorPicker.size.X = e.Size.X
-			colorPicker.position.Y = float32(e.Size.Y - colorPicker.size.Y)
-			colorPicker.Layout(gtx)
+			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+					title := material.H1(theme, fmt.Sprintf("%v", colorPicker.chosenColor))
+					title.Color = colorPicker.chosenColor
+					title.Alignment = text.Middle
+					title.Layout(gtx)
+	
+					editingArea.board.drawingColor = colorPicker.chosenColor
+					return editingArea.Layout(gtx)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return colorPicker.Layout(gtx)
+				}),
+			)
 
 			e.Frame(gtx.Ops)
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"math"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -14,18 +15,18 @@ import (
 )
 
 type ColorPicker struct {
-	position     f32.Point
-	size         image.Point
-	colors       [9]color.NRGBA
-	partLength   int
-	chosenColor  color.NRGBA
-	pickPosition *f32.Point
+	size        image.Point
+	colors      [9]color.NRGBA
+	partLength  int
+	chosenColor color.NRGBA
+	pickRatio   *float32
+	pickerSize  float32
 }
 
-func newColorPicker(position f32.Point, size image.Point) *ColorPicker {
+func newColorPicker(size image.Point) *ColorPicker {
 	cp := &ColorPicker{}
-	cp.position = position
 	cp.size = size
+	cp.pickerSize = float32(cp.size.Y) * 0.75
 
 	cp.colors = [9]color.NRGBA{
 		{255, 0, 0, 255},
@@ -45,7 +46,9 @@ func newColorPicker(position f32.Point, size image.Point) *ColorPicker {
 }
 
 func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
+	cp.size.X = gtx.Constraints.Max.X
 	cp.partLength = cp.size.X / (len(cp.colors) - 1)
+	cp.pickerSize = float32(cp.size.Y) * 0.4
 
 	cp.HandleInput(gtx)
 	cp.Draw(gtx)
@@ -54,9 +57,7 @@ func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (cp *ColorPicker) HandleInput(gtx layout.Context) {
-	roundPos := cp.position.Round()
-
-	r := image.Rect(roundPos.X, roundPos.Y, roundPos.X+cp.size.X, roundPos.Y+cp.size.Y)
+	r := image.Rect(9, 9, cp.size.X, cp.size.Y)
 	area := clip.Rect(r).Push(gtx.Ops)
 
 	event.Op(gtx.Ops, cp)
@@ -75,9 +76,11 @@ func (cp *ColorPicker) HandleInput(gtx layout.Context) {
 			continue
 		}
 
-		cp.pickPosition = &e.Position
+		r := e.Position.X / float32(cp.size.X)
+		cp.pickRatio = &r
+		*cp.pickRatio = float32(math.Max(math.Min(float64(*cp.pickRatio), 1), 0))
 
-		color := cp.getColorFromPosition(*cp.pickPosition)
+		color := cp.getColorFromPosition(cp.getPickerPositionClamped())
 		if color != nil {
 			cp.chosenColor = *color
 		}
@@ -86,27 +89,35 @@ func (cp *ColorPicker) HandleInput(gtx layout.Context) {
 	area.Pop()
 }
 
-func (cp *ColorPicker) DrawPick(mousePos f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
-	const size = 10
-	const sizeOuter = 13
+func (cp *ColorPicker) getPickerPositionClamped() float32 {
+	minmax := float64(cp.size.X) / float64(len(cp.colors) - 1) / 2
+	pickerPosition := *cp.pickRatio * float32(cp.size.X)
+	pickerPosition = float32(math.Max(math.Min(float64(pickerPosition), float64(cp.size.X) - minmax), minmax))
+	return pickerPosition
+}
 
-	roundedMPos := mousePos.Round()
-	fmt.Println(roundedMPos)
-	
+func (cp *ColorPicker) DrawPick(position float32, colorAtPosition color.NRGBA, gtx layout.Context) {
+	roundedX := int(math.Round(float64(position)))
+
+	sizeOuter := int(math.Round(float64(cp.pickerSize)))
+	sizeInner := int(math.Round(float64(cp.pickerSize) * 0.75))
+
+	fmt.Println(position)
+
 	{
-		y0 := cp.position.Round().Y + cp.size.Y/2 - sizeOuter
-		y1 := cp.position.Round().Y + cp.size.Y/2 + sizeOuter
-		r := image.Rect(roundedMPos.X-sizeOuter, y0, roundedMPos.X+sizeOuter, y1)
+		y0 := cp.size.Y/2 - sizeOuter
+		y1 := cp.size.Y/2 + sizeOuter
+		r := image.Rect(roundedX-sizeOuter, y0, roundedX+sizeOuter, y1)
 		paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
 		a := clip.Ellipse(r).Push(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
 		a.Pop()
 	}
-	
+
 	{
-		y0 := cp.position.Round().Y + cp.size.Y/2 - size
-		y1 := cp.position.Round().Y + cp.size.Y/2 + size
-		r := image.Rect(roundedMPos.X-size, y0, roundedMPos.X+size, y1)
+		y0 := cp.size.Y/2 - sizeInner
+		y1 := cp.size.Y/2 + sizeInner
+		r := image.Rect(roundedX-sizeInner, y0, roundedX+sizeInner, y1)
 		paint.ColorOp{Color: cp.chosenColor}.Add(gtx.Ops)
 		a := clip.Ellipse(r).Push(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
@@ -115,15 +126,13 @@ func (cp *ColorPicker) DrawPick(mousePos f32.Point, colorAtPosition color.NRGBA,
 }
 
 func (cp *ColorPicker) Draw(gtx layout.Context) {
-	roundPos := cp.position.Round()
-
-	startX := roundPos.X
-	endX := roundPos.X + cp.partLength
+	startX := 0
+	endX := cp.partLength
 	for i := 0; i < len(cp.colors)-1; i++ {
 		from := cp.colors[i]
 		to := cp.colors[i+1]
 
-		grect := image.Rect(startX, roundPos.Y, endX, roundPos.Y+cp.size.Y)
+		grect := image.Rect(startX, 0, endX, cp.size.Y)
 		paint.LinearGradientOp{
 			Stop1:  f32.Pt(float32(grect.Min.X), float32(grect.Min.Y)),
 			Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
@@ -138,16 +147,17 @@ func (cp *ColorPicker) Draw(gtx layout.Context) {
 		endX += cp.partLength
 	}
 
-	if cp.pickPosition != nil {
-		col := cp.getColorFromPosition(*cp.pickPosition)
+	if cp.pickRatio != nil {
+		p := cp.getPickerPositionClamped()
+		col := cp.getColorFromPosition(p)
 		if col != nil {
-			cp.DrawPick(*cp.pickPosition, *col, gtx)
+			cp.DrawPick(p, *col, gtx)
 		}
 	}
 }
 
-func (cp *ColorPicker) getColorFromPosition(pos f32.Point) *color.NRGBA {
-	relX := pos.Sub(cp.position).Round().X
+func (cp *ColorPicker) getColorFromPosition(x float32) *color.NRGBA {
+	relX := int(math.Round(float64(x)))
 	gradientNumber := relX / cp.partLength
 	if gradientNumber >= 0 && gradientNumber < len(cp.colors)-1 {
 		col1 := cp.colors[gradientNumber]

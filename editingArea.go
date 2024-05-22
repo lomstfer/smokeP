@@ -23,13 +23,13 @@ func newEditingArea() *EditingArea {
 }
 
 func (ea *EditingArea) CenterBoard() {
-	
+
 }
 
-func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
+func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {	
 	r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 	area := clip.Rect(r).Push(gtx.Ops)
-	
+
 	dragAccumulation := f32.Point{X: 0, Y: 0}
 
 	event.Op(gtx.Ops, ea)
