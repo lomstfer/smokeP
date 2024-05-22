@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"math"
@@ -19,7 +18,7 @@ type ColorPicker struct {
 	colors      [9]color.NRGBA
 	partLength  int
 	chosenColor color.NRGBA
-	pickRatio   *float32
+	pickFractionOfWhole   *float32
 	pickerSize  float32
 }
 
@@ -39,8 +38,9 @@ func newColorPicker(size image.Point) *ColorPicker {
 		{255, 0, 0, 255},
 		{255, 0, 0, 255},
 	}
-
+	
 	cp.partLength = cp.size.X / (len(cp.colors) - 1)
+	cp.updateChosenColorFromPickerPos(0.0)
 
 	return cp
 }
@@ -64,7 +64,7 @@ func (cp *ColorPicker) HandleInput(gtx layout.Context) {
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cp,
-			Kinds:        pointer.Drag,
+			Kinds:        pointer.Drag | pointer.Press,
 			ScrollBounds: image.Rect(-10, -10, 10, 10),
 		})
 		if !ok {
@@ -76,22 +76,30 @@ func (cp *ColorPicker) HandleInput(gtx layout.Context) {
 			continue
 		}
 
-		r := e.Position.X / float32(cp.size.X)
-		cp.pickRatio = &r
-		*cp.pickRatio = float32(math.Max(math.Min(float64(*cp.pickRatio), 1), 0))
-
-		color := cp.getColorFromPosition(cp.getPickerPositionClamped())
-		if color != nil {
-			cp.chosenColor = *color
+		if !e.Buttons.Contain(pointer.ButtonPrimary) {
+			continue
 		}
-	}
 
+		r := e.Position.X / float32(cp.size.X)
+		cp.updateChosenColorFromPickerPos(r)
+	}
+	
 	area.Pop()
+}
+
+func (cp *ColorPicker) updateChosenColorFromPickerPos(fraction float32) {
+	cp.pickFractionOfWhole = &fraction
+	*cp.pickFractionOfWhole = float32(math.Max(math.Min(float64(*cp.pickFractionOfWhole), 1), 0))
+	
+	color := cp.getColorFromPosition(cp.getPickerPositionClamped())
+	if color != nil {
+		cp.chosenColor = *color
+	}
 }
 
 func (cp *ColorPicker) getPickerPositionClamped() float32 {
 	minmax := float64(cp.size.X) / float64(len(cp.colors) - 1) / 2
-	pickerPosition := *cp.pickRatio * float32(cp.size.X)
+	pickerPosition := *cp.pickFractionOfWhole * float32(cp.size.X)
 	pickerPosition = float32(math.Max(math.Min(float64(pickerPosition), float64(cp.size.X) - minmax), minmax))
 	return pickerPosition
 }
@@ -101,8 +109,6 @@ func (cp *ColorPicker) DrawPick(position float32, colorAtPosition color.NRGBA, g
 
 	sizeOuter := int(math.Round(float64(cp.pickerSize)))
 	sizeInner := int(math.Round(float64(cp.pickerSize) * 0.75))
-
-	fmt.Println(position)
 
 	{
 		y0 := cp.size.Y/2 - sizeOuter
@@ -147,7 +153,7 @@ func (cp *ColorPicker) Draw(gtx layout.Context) {
 		endX += cp.partLength
 	}
 
-	if cp.pickRatio != nil {
+	if cp.pickFractionOfWhole != nil {
 		p := cp.getPickerPositionClamped()
 		col := cp.getColorFromPosition(p)
 		if col != nil {

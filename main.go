@@ -1,17 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"image"
 	"log"
 	"os"
 
 	"gioui.org/app"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/text"
 	"gioui.org/widget/material"
 )
+
+var g_theme *material.Theme
 
 func main() {
 	go func() {
@@ -28,13 +27,13 @@ func main() {
 }
 
 func run(window *app.Window) error {
-	theme := material.NewTheme()
+	g_theme = material.NewTheme()
 
 	var ops op.Ops
 
 	editingArea := newEditingArea()
 
-	colorPicker := newColorPicker(image.Pt(0, 50))
+	settingsArea := newSettingsArea()
 
 	for {
 		switch e := window.Event().(type) {
@@ -43,18 +42,13 @@ func run(window *app.Window) error {
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
 
-			layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+			layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					title := material.H1(theme, fmt.Sprintf("%v", colorPicker.chosenColor))
-					title.Color = colorPicker.chosenColor
-					title.Alignment = text.Middle
-					title.Layout(gtx)
-	
-					editingArea.board.drawingColor = colorPicker.chosenColor
-					return editingArea.Layout(gtx)
+					return settingsArea.Layout(gtx)
 				}),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					return colorPicker.Layout(gtx)
+				layout.Flexed(2, func(gtx layout.Context) layout.Dimensions {
+					editingArea.board.drawingColor = settingsArea.colorPicker.chosenColor
+					return editingArea.Layout(gtx)
 				}),
 			)
 
