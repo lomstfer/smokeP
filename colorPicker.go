@@ -6,174 +6,39 @@ import (
 	"math"
 
 	"gioui.org/f32"
-	"gioui.org/io/event"
-	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 )
 
 type ColorPicker struct {
-	size        image.Point
-	colors      [9]color.NRGBA
-	partLength  int
+	size     image.Point
+	hue      *ColorPickerHue
+	valSat *ColorPickerValueSat
 	chosenColor color.NRGBA
-	pickFractionOfWhole   *float32
-	pickerSize  float32
 }
 
 func newColorPicker(size image.Point) *ColorPicker {
 	cp := &ColorPicker{}
-	cp.size = size
-	cp.pickerSize = float32(cp.size.Y) * 0.75
-
-	cp.colors = [9]color.NRGBA{
-		{255, 0, 0, 255},
-		{255, 0, 0, 255},
-		{255, 255, 0, 255},
-		{0, 255, 0, 255},
-		{0, 255, 255, 255},
-		{0, 0, 255, 255},
-		{255, 0, 255, 255},
-		{255, 0, 0, 255},
-		{255, 0, 0, 255},
-	}
-	
-	cp.partLength = cp.size.X / (len(cp.colors) - 1)
-	cp.updateChosenColorFromPickerPos(0.0)
+	cp.hue = newColorPickerHue(size)
+	cp.valSat = newColorPickerValueSat(cp.hue.chosenColor, size)
 
 	return cp
 }
 
 func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
-	cp.size.X = gtx.Constraints.Max.X
-	cp.partLength = cp.size.X / (len(cp.colors) - 1)
-	cp.pickerSize = float32(cp.size.Y) * 0.4
+	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			return cp.hue.Layout(gtx)
+		}),
+		layout.Flexed(2, func(gtx layout.Context) layout.Dimensions {
+			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)
+			cp.chosenColor = cp.valSat.chosenColor
+			return d
+		}),
+	)
 
-	cp.HandleInput(gtx)
-	cp.Draw(gtx)
-
-	return layout.Dimensions{Size: cp.size}
-}
-
-func (cp *ColorPicker) HandleInput(gtx layout.Context) {
-	r := image.Rect(9, 9, cp.size.X, cp.size.Y)
-	area := clip.Rect(r).Push(gtx.Ops)
-
-	event.Op(gtx.Ops, cp)
-	for {
-		ev, ok := gtx.Event(pointer.Filter{
-			Target:       cp,
-			Kinds:        pointer.Drag | pointer.Press,
-			ScrollBounds: image.Rect(-10, -10, 10, 10),
-		})
-		if !ok {
-			break
-		}
-
-		e, ok := ev.(pointer.Event)
-		if !ok {
-			continue
-		}
-
-		if !e.Buttons.Contain(pointer.ButtonPrimary) {
-			continue
-		}
-
-		r := e.Position.X / float32(cp.size.X)
-		cp.updateChosenColorFromPickerPos(r)
-	}
-	
-	area.Pop()
-}
-
-func (cp *ColorPicker) updateChosenColorFromPickerPos(fraction float32) {
-	cp.pickFractionOfWhole = &fraction
-	*cp.pickFractionOfWhole = float32(math.Max(math.Min(float64(*cp.pickFractionOfWhole), 1), 0))
-	
-	color := cp.getColorFromPosition(cp.getPickerPositionClamped())
-	if color != nil {
-		cp.chosenColor = *color
-	}
-}
-
-func (cp *ColorPicker) getPickerPositionClamped() float32 {
-	minmax := float64(cp.size.X) / float64(len(cp.colors) - 1) / 2
-	pickerPosition := *cp.pickFractionOfWhole * float32(cp.size.X)
-	pickerPosition = float32(math.Max(math.Min(float64(pickerPosition), float64(cp.size.X) - minmax), minmax))
-	return pickerPosition
-}
-
-func (cp *ColorPicker) DrawPick(position float32, colorAtPosition color.NRGBA, gtx layout.Context) {
-	roundedX := int(math.Round(float64(position)))
-
-	sizeOuter := int(math.Round(float64(cp.pickerSize)))
-	sizeInner := int(math.Round(float64(cp.pickerSize) * 0.75))
-
-	{
-		y0 := cp.size.Y/2 - sizeOuter
-		y1 := cp.size.Y/2 + sizeOuter
-		r := image.Rect(roundedX-sizeOuter, y0, roundedX+sizeOuter, y1)
-		paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
-		a := clip.Ellipse(r).Push(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
-		a.Pop()
-	}
-
-	{
-		y0 := cp.size.Y/2 - sizeInner
-		y1 := cp.size.Y/2 + sizeInner
-		r := image.Rect(roundedX-sizeInner, y0, roundedX+sizeInner, y1)
-		paint.ColorOp{Color: cp.chosenColor}.Add(gtx.Ops)
-		a := clip.Ellipse(r).Push(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
-		a.Pop()
-	}
-}
-
-func (cp *ColorPicker) Draw(gtx layout.Context) {
-	startX := 0
-	endX := cp.partLength
-	for i := 0; i < len(cp.colors)-1; i++ {
-		from := cp.colors[i]
-		to := cp.colors[i+1]
-
-		grect := image.Rect(startX, 0, endX, cp.size.Y)
-		paint.LinearGradientOp{
-			Stop1:  f32.Pt(float32(grect.Min.X), float32(grect.Min.Y)),
-			Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
-			Color1: from,
-			Color2: to,
-		}.Add(gtx.Ops)
-		garea := clip.Rect(grect).Push(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
-		garea.Pop()
-
-		startX += cp.partLength
-		endX += cp.partLength
-	}
-
-	if cp.pickFractionOfWhole != nil {
-		p := cp.getPickerPositionClamped()
-		col := cp.getColorFromPosition(p)
-		if col != nil {
-			cp.DrawPick(p, *col, gtx)
-		}
-	}
-}
-
-func (cp *ColorPicker) getColorFromPosition(x float32) *color.NRGBA {
-	relX := int(math.Round(float64(x)))
-	gradientNumber := relX / cp.partLength
-	if gradientNumber >= 0 && gradientNumber < len(cp.colors)-1 {
-		col1 := cp.colors[gradientNumber]
-		col2 := cp.colors[gradientNumber+1]
-		gradientStride := float64(relX%cp.partLength) / float64(cp.partLength)
-		colorResult := lerpColor(col1, col2, gradientStride)
-		return &colorResult
-	}
-
-	return nil
+	return d
 }
 
 func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
@@ -182,5 +47,34 @@ func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
 		G: uint8(int(col1.G) + int(float64(int(col2.G)-int(col1.G))*t)),
 		B: uint8(int(col1.B) + int(float64(int(col2.B)-int(col1.B))*t)),
 		A: uint8(int(col1.A) + int(float64(int(col2.A)-int(col1.A))*t)),
+	}
+}
+
+func drawPicker(position f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
+	const pickerSize = 10
+
+	roundedPos := position.Round()
+
+	sizeOuter := int(math.Round(float64(pickerSize)))
+	sizeInner := int(math.Round(float64(pickerSize) * 0.75))
+
+	{
+		y0 := roundedPos.Y - sizeOuter
+		y1 := roundedPos.Y + sizeOuter
+		r := image.Rect(roundedPos.X-sizeOuter, y0, roundedPos.X+sizeOuter, y1)
+		paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
+		a := clip.Ellipse(r).Push(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		a.Pop()
+	}
+
+	{
+		y0 := roundedPos.Y - sizeInner
+		y1 := roundedPos.Y + sizeInner
+		r := image.Rect(roundedPos.X-sizeInner, y0, roundedPos.X+sizeInner, y1)
+		paint.ColorOp{Color: colorAtPosition}.Add(gtx.Ops)
+		a := clip.Ellipse(r).Push(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		a.Pop()
 	}
 }

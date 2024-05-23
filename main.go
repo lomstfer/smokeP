@@ -1,17 +1,12 @@
 package main
 
 import (
-	"image"
-	"image/color"
 	"log"
 	"os"
 
 	"gioui.org/app"
-	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 	"gioui.org/widget/material"
 )
 
@@ -20,7 +15,7 @@ var g_theme *material.Theme
 func main() {
 	go func() {
 		window := new(app.Window)
-		window.Option(app.Size(640, 360))
+		window.Option(app.Size(1280, 720))
 
 		err := run(window)
 		if err != nil {
@@ -56,31 +51,6 @@ func run(window *app.Window) error {
 					return editingArea.Layout(gtx)
 				}),
 			)
-
-			grect := image.Rect(0, 0, 200, 200)
-			{
-				paint.LinearGradientOp{
-					Stop1:  f32.Pt(float32(grect.Min.X), float32(grect.Min.Y)),
-					Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
-					Color1: color.NRGBA{255, 255, 255, 255},
-					Color2: color.NRGBA{255, 0, 0, 255},
-				}.Add(gtx.Ops)
-				garea := clip.Rect(grect).Push(gtx.Ops)
-				paint.PaintOp{}.Add(gtx.Ops)
-				garea.Pop()
-			}
-
-			{
-				paint.LinearGradientOp{
-					Stop1:  f32.Pt(float32(grect.Max.X), float32(grect.Max.Y)),
-					Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
-					Color1: color.NRGBA{0, 0, 0, 255},
-					Color2: color.NRGBA{0, 0, 0, 0},
-				}.Add(gtx.Ops)
-				garea := clip.Rect(grect).Push(gtx.Ops)
-				paint.PaintOp{}.Add(gtx.Ops)
-				garea.Pop()
-			}
 
 			e.Frame(gtx.Ops)
 		}

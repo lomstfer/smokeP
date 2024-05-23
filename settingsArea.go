@@ -39,7 +39,7 @@ func (sa *SettingsArea) Layout(gtx layout.Context) layout.Dimensions {
 
 			return title.Layout(gtx)
 		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 			area := clip.Rect(r).Push(gtx.Ops)
 			paint.ColorOp{Color: color.NRGBA{255, 100, 100, 255}}.Add(gtx.Ops)
