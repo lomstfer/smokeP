@@ -46,7 +46,7 @@ func run(window *app.Window) error {
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 					return settingsArea.Layout(gtx)
 				}),
-				layout.Flexed(2, func(gtx layout.Context) layout.Dimensions {
+				layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
 					editingArea.board.drawingColor = settingsArea.colorPicker.chosenColor
 					return editingArea.Layout(gtx)
 				}),
@@ -56,16 +56,3 @@ func run(window *app.Window) error {
 		}
 	}
 }
-
-// func getPixelData(img image.Image) *image.NRGBA {
-// 	rgba := image.NewNRGBA(img.Bounds())
-
-// 	for y := 0; y < img.Bounds().Dx(); y++ {
-// 		for x := 0; x < img.Bounds().Dy(); x++ {
-// 			c := img.At(x, y)
-// 			rgba.Set(x, y, c)
-// 		}
-// 	}
-
-// 	return rgba
-// }

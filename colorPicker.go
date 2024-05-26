@@ -9,12 +9,14 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"gioui.org/unit"
 )
 
 type ColorPicker struct {
 	size        image.Point
 	hue         *ColorPickerHue
 	valSat      *ColorPickerValueSat
+	alpha      *ColorPickerAlpha
 	chosenColor color.NRGBA
 }
 
@@ -22,6 +24,8 @@ func newColorPicker(size image.Point) *ColorPicker {
 	cp := &ColorPicker{}
 	cp.hue = newColorPickerHue(size)
 	cp.valSat = newColorPickerValueSat(cp.hue.chosenColor, size)
+	cp.chosenColor = cp.valSat.chosenColor
+	cp.alpha = newColorPickerAlpha(cp.chosenColor, size)
 
 	return cp
 }
@@ -34,7 +38,12 @@ func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
 		}),
 		layout.Flexed(2, func(gtx layout.Context) layout.Dimensions {
 			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)
+			return d
+		}),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			cp.chosenColor = cp.valSat.chosenColor
+			d := cp.alpha.Layout(cp.chosenColor, gtx)
+			cp.chosenColor.A = cp.alpha.chosenColor.A
 			return d
 		}),
 	)
@@ -52,7 +61,7 @@ func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
 }
 
 func drawPicker(position f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
-	const pickerSize = 10
+	pickerSize := unit.Dp(10)
 
 	roundedPos := position.Round()
 

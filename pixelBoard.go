@@ -22,6 +22,7 @@ type PixelBoard struct {
 	position     f32.Point
 	scale        float32
 	drawingColor color.NRGBA
+	bgImage      paint.ImageOp
 }
 
 func newPixelBoard() *PixelBoard {
@@ -33,6 +34,8 @@ func newPixelBoard() *PixelBoard {
 	}
 
 	pb.scale = 20
+
+	pb.bgImage = paint.NewImageOp(loadImage("transp.jpg"))
 
 	return pb
 }
