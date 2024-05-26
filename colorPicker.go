@@ -12,9 +12,9 @@ import (
 )
 
 type ColorPicker struct {
-	size     image.Point
-	hue      *ColorPickerHue
-	valSat *ColorPickerValueSat
+	size        image.Point
+	hue         *ColorPickerHue
+	valSat      *ColorPickerValueSat
 	chosenColor color.NRGBA
 }
 
@@ -29,7 +29,8 @@ func newColorPicker(size image.Point) *ColorPicker {
 func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return cp.hue.Layout(gtx)
+			d := cp.hue.Layout(gtx)
+			return d
 		}),
 		layout.Flexed(2, func(gtx layout.Context) layout.Dimensions {
 			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)

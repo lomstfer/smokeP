@@ -15,7 +15,7 @@ import (
 
 type ColorPickerHue struct {
 	size                image.Point
-	colors              [9]color.NRGBA
+	colors              [7]color.NRGBA
 	partLength          int
 	chosenColor         color.NRGBA
 	pickFractionOfWhole *float32
@@ -27,15 +27,13 @@ func newColorPickerHue(size image.Point) *ColorPickerHue {
 	cph.size = size
 	cph.pickerSize = float32(cph.size.Y) * 0.75
 
-	cph.colors = [9]color.NRGBA{
-		{255, 0, 0, 255},
+	cph.colors = [7]color.NRGBA{
 		{255, 0, 0, 255},
 		{255, 255, 0, 255},
 		{0, 255, 0, 255},
 		{0, 255, 255, 255},
 		{0, 0, 255, 255},
 		{255, 0, 255, 255},
-		{255, 0, 0, 255},
 		{255, 0, 0, 255},
 	}
 
@@ -98,33 +96,27 @@ func (cph *ColorPickerHue) updateChosenColorFromPickerPos(fraction float32) {
 }
 
 func (cph *ColorPickerHue) getPickerPositionClamped() float32 {
-	minmax := float64(cph.size.X) / float64(len(cph.colors)-1) / 2
 	pickerPosition := *cph.pickFractionOfWhole * float32(cph.size.X)
-	pickerPosition = float32(math.Max(math.Min(float64(pickerPosition), float64(cph.size.X)-minmax), minmax))
+	pickerPosition = float32(math.Max(math.Min(float64(pickerPosition), float64(cph.size.X)), 0))
 	return pickerPosition
 }
 
 func (cph *ColorPickerHue) Draw(gtx layout.Context) {
-	startX := 0
-	endX := cph.partLength
-	for i := 0; i < len(cph.colors)-1; i++ {
-		from := cph.colors[i]
-		to := cph.colors[i+1]
+	grect := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 
-		grect := image.Rect(startX, 0, endX, cph.size.Y)
-		paint.LinearGradientOp{
-			Stop1:  f32.Pt(float32(grect.Min.X), float32(grect.Min.Y)),
-			Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
-			Color1: from,
-			Color2: to,
-		}.Add(gtx.Ops)
-		garea := clip.Rect(grect).Push(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
-		garea.Pop()
+    img := image.NewNRGBA(grect)
 
-		startX += cph.partLength
-		endX += cph.partLength
-	}
+    for x := 0; x < grect.Dx(); x++ {
+		col := cph.getColorFromPosition(float32(x))
+		if (col != nil) {
+			for y := 0; y < grect.Dy(); y++ {
+				img.SetNRGBA(x, y, *col)
+			}
+		}
+    }
+
+	paint.NewImageOp(img).Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
 
 	if cph.pickFractionOfWhole != nil {
 		p := cph.getPickerPositionClamped()

@@ -25,7 +25,9 @@ func newColorPickerValueSat(hueColor color.NRGBA, size image.Point) *ColorPicker
 	cpvs.size = size
 	cpvs.pickerSize = 10
 
-	cpvs.updateChosenColorFromPickerPos(hueColor, f32.Pt(0, 0))
+	cpvs.pickFractionPos = &f32.Point{0, 0}
+
+	cpvs.updateChosenColorFromPickerPos(hueColor)
 
 	return cpvs
 }
@@ -63,15 +65,15 @@ func (cpvs *ColorPickerValueSat) HandleInput(hueColor color.NRGBA, gtx layout.Co
 			continue
 		}
 
-		r := f32.Pt(e.Position.X/float32(cpvs.size.X), e.Position.Y/float32(cpvs.size.Y))
-		cpvs.updateChosenColorFromPickerPos(hueColor, r)
+		cpvs.pickFractionPos = &f32.Point{X: e.Position.X / float32(cpvs.size.X), Y: e.Position.Y / float32(cpvs.size.Y)}
 	}
+
+	cpvs.updateChosenColorFromPickerPos(hueColor)
 
 	area.Pop()
 }
 
-func (cpvs *ColorPickerValueSat) updateChosenColorFromPickerPos(hueColor color.NRGBA, fraction f32.Point) {
-	cpvs.pickFractionPos = &fraction
+func (cpvs *ColorPickerValueSat) updateChosenColorFromPickerPos(hueColor color.NRGBA) {
 	*cpvs.pickFractionPos = f32.Pt(
 		float32(math.Max(math.Min(float64(cpvs.pickFractionPos.X), 1), 0)),
 		float32(math.Max(math.Min(float64(cpvs.pickFractionPos.Y), 1), 0)))
@@ -94,29 +96,18 @@ func (cpvs *ColorPickerValueSat) getPickerPositionClamped() f32.Point {
 
 func (cpvs *ColorPickerValueSat) Draw(hueColor color.NRGBA, gtx layout.Context) {
 	grect := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
-	{
-		paint.LinearGradientOp{
-			Stop1:  f32.Pt(float32(grect.Min.X), float32(grect.Min.Y)),
-			Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
-			Color1: color.NRGBA{255, 255, 255, 255},
-			Color2: hueColor,
-		}.Add(gtx.Ops)
-		garea := clip.Rect(grect).Push(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
-		garea.Pop()
+
+	img := image.NewNRGBA(grect)
+
+	for x := 0; x < grect.Dx(); x++ {
+		for y := 0; y < grect.Dy(); y++ {
+			col := *cpvs.getColorFromPosition(f32.Pt(float32(x), float32(y)), hueColor)
+			img.SetNRGBA(x, y, col)
+		}
 	}
 
-	{
-		paint.LinearGradientOp{
-			Stop1:  f32.Pt(float32(grect.Max.X), float32(grect.Max.Y)),
-			Stop2:  f32.Pt(float32(grect.Max.X), float32(grect.Min.Y)),
-			Color1: color.NRGBA{0, 0, 0, 255},
-			Color2: color.NRGBA{0, 0, 0, 0},
-		}.Add(gtx.Ops)
-		garea := clip.Rect(grect).Push(gtx.Ops)
-		paint.PaintOp{}.Add(gtx.Ops)
-		garea.Pop()
-	}
+	paint.NewImageOp(img).Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
 
 	if cpvs.pickFractionPos != nil {
 		p := cpvs.getPickerPositionClamped()
@@ -130,7 +121,7 @@ func (cpvs *ColorPickerValueSat) Draw(hueColor color.NRGBA, gtx layout.Context) 
 func (cpvs *ColorPickerValueSat) getColorFromPosition(pos f32.Point, hueColor color.NRGBA) *color.NRGBA {
 	rel := f32.Pt(pos.X/float32(cpvs.size.X), pos.Y/float32(cpvs.size.Y))
 	rgb := lerpColor(color.NRGBA{255, 255, 255, 255}, hueColor, float64(rel.X))
-	value := float32(lerpColor(color.NRGBA{0, 0, 0, 255}, color.NRGBA{0, 0, 0, 0}, float64(rel.Y)).A)/255
+	value := float32(lerpColor(color.NRGBA{0, 0, 0, 255}, color.NRGBA{0, 0, 0, 0}, float64(rel.Y)).A) / 255
 	rgb = color.NRGBA{R: uint8(float32(rgb.R) * value), G: uint8(float32(rgb.G) * value), B: uint8(float32(rgb.B) * value), A: rgb.A}
 
 	return &rgb
