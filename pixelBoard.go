@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
+	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/op"
@@ -35,7 +36,7 @@ func newPixelBoard() *PixelBoard {
 
 	pb.scale = 20
 
-	pb.bgImage = paint.NewImageOp(loadImage("transp.jpg"))
+	pb.bgImage = paint.NewImageOp(utils.LoadImage("transp.jpg"))
 
 	return pb
 }

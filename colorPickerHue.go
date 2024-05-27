@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -16,9 +17,9 @@ import (
 type ColorPickerHue struct {
 	size                     image.Point
 	colors                   [7]color.NRGBA
-	partLength               int
+	partLength               float32
 	chosenColor              color.NRGBA
-	pickFractionPos      *float32
+	pickFractionPos          *float32
 	renderImage              paint.ImageOp
 	triggerRenderImageUpdate bool
 }
@@ -37,7 +38,7 @@ func newColorPickerHue(size image.Point) *ColorPickerHue {
 		{255, 0, 0, 255},
 	}
 
-	cph.partLength = cph.size.X / (len(cph.colors) - 1)
+	cph.partLength = float32(cph.size.X) / float32(len(cph.colors)-1)
 	cph.updateChosenColorFromPickerPos(0.0)
 
 	return cph
@@ -46,7 +47,7 @@ func newColorPickerHue(size image.Point) *ColorPickerHue {
 func (cph *ColorPickerHue) Layout(gtx layout.Context) layout.Dimensions {
 	cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || cph.size != gtx.Constraints.Max
 	cph.size = gtx.Constraints.Max
-	cph.partLength = cph.size.X / (len(cph.colors) - 1)
+	cph.partLength = float32(cph.size.X) / float32(len(cph.colors)-1)
 
 	cph.HandleInput(gtx)
 	cph.Draw(gtx)
@@ -90,10 +91,8 @@ func (cph *ColorPickerHue) updateChosenColorFromPickerPos(fraction float32) {
 	*cph.pickFractionPos = float32(math.Max(math.Min(float64(*cph.pickFractionPos), 1), 0))
 
 	color := cph.getColorFromPosition(cph.getPickerPositionClamped())
-	if color != nil {
-		cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || *color != cph.chosenColor
-		cph.chosenColor = *color
-	}
+	cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || color != cph.chosenColor
+	cph.chosenColor = color
 }
 
 func (cph *ColorPickerHue) getPickerPositionClamped() float32 {
@@ -110,10 +109,8 @@ func (cph *ColorPickerHue) Draw(gtx layout.Context) {
 		img := image.NewNRGBA(grect)
 		for x := 0; x < grect.Dx(); x++ {
 			col := cph.getColorFromPosition(float32(x))
-			if col != nil {
-				for y := 0; y < grect.Dy(); y++ {
-					img.SetNRGBA(x, y, *col)
-				}
+			for y := 0; y < grect.Dy(); y++ {
+				img.SetNRGBA(x, y, col)
 			}
 		}
 		cph.renderImage = paint.NewImageOp(img)
@@ -124,24 +121,16 @@ func (cph *ColorPickerHue) Draw(gtx layout.Context) {
 
 	if cph.pickFractionPos != nil {
 		p := cph.getPickerPositionClamped()
-		// fmt.Println(p)
 		col := cph.getColorFromPosition(p)
-		if col != nil {
-			drawPicker(f32.Pt(p, float32(cph.size.Y)/2), *col, gtx)
-		}
+		drawPicker(f32.Pt(p, float32(cph.size.Y)/2), col, gtx)
 	}
 }
 
-func (cph *ColorPickerHue) getColorFromPosition(x float32) *color.NRGBA {
-	relX := int(math.Round(float64(x)))
-	gradientNumber := relX / cph.partLength
-	if gradientNumber >= 0 && gradientNumber < len(cph.colors)-1 {
-		col1 := cph.colors[gradientNumber]
-		col2 := cph.colors[gradientNumber+1]
-		gradientStride := float64(relX%cph.partLength) / float64(cph.partLength)
-		colorResult := lerpColor(col1, col2, gradientStride)
-		return &colorResult
-	}
-
-	return nil
+func (cph *ColorPickerHue) getColorFromPosition(x float32) color.NRGBA {
+	gradientNumber := utils.ClampInt(int(x/cph.partLength), 0, len(cph.colors)-2)
+	col1 := cph.colors[gradientNumber]
+	col2 := cph.colors[gradientNumber+1]
+	gradientStride := float64(x-cph.partLength*float32(gradientNumber)) / float64(cph.partLength)
+	colorResult := lerpColor(col1, col2, gradientStride)
+	return colorResult
 }

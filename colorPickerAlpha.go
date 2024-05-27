@@ -118,7 +118,6 @@ func (cpa *ColorPickerAlpha) Draw(colorWithoutAlpha color.NRGBA, gtx layout.Cont
 }
 
 func (cpa *ColorPickerAlpha) getColorFromPosition(x float32, colorWithoutAlpha color.NRGBA) *color.NRGBA {
-	relX := int(math.Round(float64(x)))
-	colorResult := lerpColor(colorWithoutAlpha, color.NRGBA{0, 0, 0, 0}, float64(relX)/float64(cpa.size.X))
+	colorResult := lerpColor(colorWithoutAlpha, color.NRGBA{0, 0, 0, 0}, float64(x) / float64(cpa.size.X))
 	return &colorResult
 }

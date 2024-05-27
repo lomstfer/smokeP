@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/layout"
@@ -52,6 +53,7 @@ func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
+	t = utils.Clamp(t, 0, 1)
 	return color.NRGBA{
 		R: uint8(int(col1.R) + int(float64(int(col2.R)-int(col1.R))*t)),
 		G: uint8(int(col1.G) + int(float64(int(col2.G)-int(col1.G))*t)),
