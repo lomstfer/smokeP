@@ -19,11 +19,12 @@ const (
 )
 
 type PixelBoard struct {
-	pixelImg     *image.NRGBA
-	position     f32.Point
-	scale        float32
-	drawingColor color.NRGBA
-	bgImage      paint.ImageOp
+	pixelImg      *image.NRGBA
+	distanceMoved f32.Point
+	position      f32.Point
+	scale         float32
+	drawingColor  color.NRGBA
+	bgImage       paint.ImageOp
 }
 
 func newPixelBoard() *PixelBoard {
@@ -45,14 +46,14 @@ func (pb *PixelBoard) Size() f32.Point {
 	return f32.Pt(defaultBoardWidth*pb.scale, defaultBoardHeight*pb.scale)
 }
 
-func (pb *PixelBoard) Draw(ops *op.Ops) {
+func (pb *PixelBoard) Draw(editingAreaCenter f32.Point, ops *op.Ops) {
+	pb.position = pb.distanceMoved.Add(editingAreaCenter.Sub(f32.Pt(defaultBoardWidth, defaultBoardHeight).Div(2)))
+
 	imgOp := paint.NewImageOp(pb.pixelImg)
 	imgOp.Filter = paint.FilterNearest
 	imgOp.Add(ops)
 
-	tStack := op.Affine(
-		f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(pb.position),
-	).Push(ops)
+	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(pb.position)).Push(ops)
 	paint.PaintOp{}.Add(ops)
 	tStack.Pop()
 }
@@ -80,7 +81,7 @@ func (pb *PixelBoard) Zoom(scrollY float32, mousePos f32.Point) {
 
 	ratioX := mouseRelBoard.X / size.X
 	ratioY := mouseRelBoard.Y / size.Y
-	pb.position = pb.position.Sub(f32.Pt(
+	pb.distanceMoved = pb.distanceMoved.Sub(f32.Pt(
 		ratioX*scaleChange*defaultBoardWidth,
 		ratioY*scaleChange*defaultBoardHeight,
 	))

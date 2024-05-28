@@ -32,9 +32,8 @@ func run(window *app.Window) error {
 	var ops op.Ops
 
 	editingArea := newEditingArea()
-
 	settingsArea := newSettingsArea()
-
+	
 	for {
 		switch e := window.Event().(type) {
 		case app.DestroyEvent:

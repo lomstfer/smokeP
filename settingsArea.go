@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"smokep/colorPicker"
 
 	"gioui.org/layout"
@@ -21,30 +20,25 @@ func newSettingsArea() *SettingsArea {
 	sa := &SettingsArea{}
 
 	sa.colorPicker = colorPicker.NewColorPicker(image.Pt(100, 50))
-
 	return sa
 }
 
 func (sa *SettingsArea) Layout(gtx layout.Context) layout.Dimensions {
 	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			title := material.H1(g_theme, "settings")
-			title.Color = color.NRGBA{0, 0, 0, 255}
-			title.Alignment = text.Middle
-
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 			area := clip.Rect(r).Push(gtx.Ops)
 			paint.ColorOp{Color: sa.colorPicker.ChosenColor}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
 			area.Pop()
 
-			return title.Layout(gtx)
+			return layout.Dimensions{Size: gtx.Constraints.Max}
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 			area := clip.Rect(r).Push(gtx.Ops)
 			area.Pop()
-			return sa.colorPicker.Layout(gtx)
+			return sa.colorPicker.Layout(g_theme, gtx)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)

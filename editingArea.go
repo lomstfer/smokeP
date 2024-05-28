@@ -14,7 +14,7 @@ type EditingArea struct {
 	mousePos      f32.Point
 	board         *PixelBoard
 	size          image.Point
-	boardCentered bool
+	center        f32.Point
 }
 
 func newEditingArea() *EditingArea {
@@ -24,17 +24,18 @@ func newEditingArea() *EditingArea {
 	return ea
 }
 
-func (ea *EditingArea) CenterBoard() {
-	rounded := ea.size.Div(2).Sub(ea.board.Size().Div(2).Round())
-	ea.board.position = f32.Pt(float32(rounded.X), float32(rounded.Y))
-}
+// func (ea *EditingArea) CenterBoard() {
+// 	rounded := ea.size.Div(2).Sub(ea.board.Size().Div(2).Round())
+// 	ea.board.position = f32.Pt(float32(rounded.X), float32(rounded.Y))
+// }
 
 func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
 	ea.size = gtx.Constraints.Max
-	if !ea.boardCentered {
-		ea.CenterBoard()
-		ea.boardCentered = true
-	}
+	// if !ea.boardCentered {
+	// 	ea.CenterBoard()
+	// 	ea.boardCentered = true
+	// }
+	ea.center = f32.Pt(float32(ea.size.X), float32(ea.size.Y)).Div(2)
 	area := clip.Rect(image.Rect(0, 0, ea.size.X, ea.size.Y)).Push(gtx.Ops)
 
 	dragAccumulation := f32.Point{X: 0, Y: 0}
@@ -74,9 +75,9 @@ func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
 		ea.mousePos = e.Position
 	}
 
-	ea.board.position = ea.board.position.Add(dragAccumulation)
+	ea.board.distanceMoved = ea.board.distanceMoved.Add(dragAccumulation)
 
-	ea.board.Draw(gtx.Ops)
+	ea.board.Draw(ea.center, gtx.Ops)
 
 	area.Pop()
 
