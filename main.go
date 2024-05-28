@@ -24,6 +24,7 @@ func main() {
 		os.Exit(0)
 	}()
 	app.Main()
+
 }
 
 func run(window *app.Window) error {

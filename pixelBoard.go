@@ -36,8 +36,8 @@ func newPixelBoard() *PixelBoard {
 	}
 
 	pb.scale = 20
-
 	pb.bgImage = paint.NewImageOp(utils.LoadImage("transp.jpg"))
+	pb.distanceMoved = pb.Size().Div(-2)
 
 	return pb
 }
@@ -47,7 +47,7 @@ func (pb *PixelBoard) Size() f32.Point {
 }
 
 func (pb *PixelBoard) Draw(editingAreaCenter f32.Point, ops *op.Ops) {
-	pb.position = pb.distanceMoved.Add(editingAreaCenter.Sub(f32.Pt(defaultBoardWidth, defaultBoardHeight).Div(2)))
+	pb.position = pb.distanceMoved.Add(editingAreaCenter)
 
 	imgOp := paint.NewImageOp(pb.pixelImg)
 	imgOp.Filter = paint.FilterNearest
@@ -71,7 +71,7 @@ func (pb *PixelBoard) CheckIfOnBoardAndDraw(mousePos f32.Point) {
 	}
 }
 
-func (pb *PixelBoard) Zoom(scrollY float32, mousePos f32.Point) {
+func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePos f32.Point) {
 	size := pb.Size()
 	sizeNum := math.Sqrt(float64(size.X*size.X) + float64(size.Y*size.Y))
 	scaleChange := -scrollY * zoomMultiplier * float32(sizeNum)
@@ -85,4 +85,6 @@ func (pb *PixelBoard) Zoom(scrollY float32, mousePos f32.Point) {
 		ratioX*scaleChange*defaultBoardWidth,
 		ratioY*scaleChange*defaultBoardHeight,
 	))
+	
+	pb.position = pb.distanceMoved.Add(editingAreaCenter)
 }
