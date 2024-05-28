@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"smokep/colorPicker"
 
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -13,13 +14,13 @@ import (
 )
 
 type SettingsArea struct {
-	colorPicker *ColorPicker
+	colorPicker *colorPicker.ColorPicker
 }
 
 func newSettingsArea() *SettingsArea {
 	sa := &SettingsArea{}
 
-	sa.colorPicker = newColorPicker(image.Pt(100, 50))
+	sa.colorPicker = colorPicker.NewColorPicker(image.Pt(100, 50))
 
 	return sa
 }
@@ -33,7 +34,7 @@ func (sa *SettingsArea) Layout(gtx layout.Context) layout.Dimensions {
 
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 			area := clip.Rect(r).Push(gtx.Ops)
-			paint.ColorOp{Color: sa.colorPicker.chosenColor}.Add(gtx.Ops)
+			paint.ColorOp{Color: sa.colorPicker.ChosenColor}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
 			area.Pop()
 
@@ -50,8 +51,8 @@ func (sa *SettingsArea) Layout(gtx layout.Context) layout.Dimensions {
 			area := clip.Rect(r).Push(gtx.Ops)
 			area.Pop()
 
-			t := material.H2(g_theme, fmt.Sprintf("%v", sa.colorPicker.chosenColor))
-			t.Color = sa.colorPicker.chosenColor
+			t := material.H2(g_theme, fmt.Sprintf("%v", sa.colorPicker.ChosenColor))
+			t.Color = sa.colorPicker.ChosenColor
 			t.Alignment = text.Middle
 			return t.Layout(gtx)
 		}),

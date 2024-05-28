@@ -1,4 +1,4 @@
-package main
+package colorPicker
 
 import (
 	"image"
@@ -14,19 +14,18 @@ import (
 )
 
 type ColorPicker struct {
-	size        image.Point
 	hue         *ColorPickerHue
 	valSat      *ColorPickerValueSat
-	alpha      *ColorPickerAlpha
-	chosenColor color.NRGBA
+	alpha       *ColorPickerAlpha
+	ChosenColor color.NRGBA
 }
 
-func newColorPicker(size image.Point) *ColorPicker {
+func NewColorPicker(size image.Point) *ColorPicker {
 	cp := &ColorPicker{}
 	cp.hue = newColorPickerHue(size)
 	cp.valSat = newColorPickerValueSat(cp.hue.chosenColor, size)
-	cp.chosenColor = cp.valSat.chosenColor
-	cp.alpha = newColorPickerAlpha(cp.chosenColor, size)
+	cp.ChosenColor = cp.valSat.chosenColor
+	cp.alpha = newColorPickerAlpha(cp.ChosenColor, size)
 
 	return cp
 }
@@ -42,9 +41,9 @@ func (cp *ColorPicker) Layout(gtx layout.Context) layout.Dimensions {
 			return d
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			cp.chosenColor = cp.valSat.chosenColor
-			d := cp.alpha.Layout(cp.chosenColor, gtx)
-			cp.chosenColor.A = cp.alpha.chosenColor.A
+			cp.ChosenColor = cp.valSat.chosenColor
+			d := cp.alpha.Layout(cp.ChosenColor, gtx)
+			cp.ChosenColor.A = cp.alpha.chosenColor.A
 			return d
 		}),
 	)
@@ -63,18 +62,37 @@ func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
 }
 
 func drawPicker(position f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
-	pickerSize := unit.Dp(10)
+	pickerSize := unit.Dp(15)
 
 	roundedPos := position.Round()
 
-	sizeOuter := int(math.Round(float64(pickerSize)))
-	sizeInner := int(math.Round(float64(pickerSize) * 0.75))
+	sizeOuterOuter := int(math.Round(float64(pickerSize)))
+	sizeOuter := int(math.Round(float64(pickerSize)) * 0.8)
+	sizeInner := int(math.Round(float64(sizeOuter) * 0.8))
+
+	// lightness := 0.299*float64(colorAtPosition.R)/255 + 0.587*float64(colorAtPosition.G)/255 + 0.114*float64(colorAtPosition.B)/255
+	// var outlineColor color.NRGBA
+	// if lightness < 0.5 {
+	// 	outlineColor = color.NRGBA{255, 255, 255, 255}
+	// } else {
+	// 	outlineColor = color.NRGBA{0, 0, 0, 255}
+	// }
+
+	{
+		y0 := roundedPos.Y - sizeOuterOuter
+		y1 := roundedPos.Y + sizeOuterOuter
+		r := image.Rect(roundedPos.X-sizeOuterOuter, y0, roundedPos.X+sizeOuterOuter, y1)
+		paint.ColorOp{Color: color.NRGBA{0,0,0,255}}.Add(gtx.Ops)
+		a := clip.Ellipse(r).Push(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		a.Pop()
+	}
 
 	{
 		y0 := roundedPos.Y - sizeOuter
 		y1 := roundedPos.Y + sizeOuter
 		r := image.Rect(roundedPos.X-sizeOuter, y0, roundedPos.X+sizeOuter, y1)
-		paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
+		paint.ColorOp{Color: color.NRGBA{255,255,255,255}}.Add(gtx.Ops)
 		a := clip.Ellipse(r).Push(gtx.Ops)
 		paint.PaintOp{}.Add(gtx.Ops)
 		a.Pop()

@@ -47,7 +47,7 @@ func run(window *app.Window) error {
 					return settingsArea.Layout(gtx)
 				}),
 				layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
-					editingArea.board.drawingColor = settingsArea.colorPicker.chosenColor
+					editingArea.board.drawingColor = settingsArea.colorPicker.ChosenColor
 					return editingArea.Layout(gtx)
 				}),
 			)
