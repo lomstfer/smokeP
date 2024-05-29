@@ -29,7 +29,6 @@ func main() {
 
 func run(window *app.Window) error {
 	g_theme = material.NewTheme()
-
 	var ops op.Ops
 
 	editingArea := newEditingArea()

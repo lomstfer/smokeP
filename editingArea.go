@@ -17,13 +17,14 @@ type EditingArea struct {
 	board           *PixelBoard
 	size            image.Point
 	center          f32.Point
-	boardBackground *image.NRGBA
+	boardBackground paint.ImageOp
 }
 
 func newEditingArea() *EditingArea {
 	ea := &EditingArea{}
 	ea.board = newPixelBoard()
-	ea.boardBackground = generateBoardBackground()
+	ea.boardBackground = paint.NewImageOp(generateBoardBackground())
+	ea.boardBackground.Filter = paint.FilterNearest
 	return ea
 }
 
@@ -114,12 +115,10 @@ func (ea *EditingArea) drawBoardBackground(ops *op.Ops) {
 	bsize := image.Pt(int(ea.board.Size().X), int(ea.board.Size().Y))
 	area := clip.Rect(image.Rect(boardIntPosition.X, boardIntPosition.Y, boardIntPosition.X + bsize.X, boardIntPosition.Y + bsize.Y)).Push(ops)
 
-	boardBgImgOp := paint.NewImageOp(ea.boardBackground)
-	boardBgImgOp.Filter = paint.FilterNearest
-	boardBgImgOp.Add(ops)
+	ea.boardBackground.Add(ops)
 
-	scale := max(float32(ea.size.X) / float32(boardBgImgOp.Size().X), float32(ea.size.Y) / float32(boardBgImgOp.Size().Y))
-	pos := ea.center.Sub(f32.Pt(float32(boardBgImgOp.Size().X) * scale, float32(boardBgImgOp.Size().Y) * scale).Div(2))
+	scale := max(float32(ea.size.X) / float32(ea.boardBackground.Size().X), float32(ea.size.Y) / float32(ea.boardBackground.Size().Y))
+	pos := ea.center.Sub(f32.Pt(float32(ea.boardBackground.Size().X) * scale, float32(ea.boardBackground.Size().Y) * scale).Div(2))
 	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(scale, scale)).Offset(pos)).Push(ops)
 	paint.PaintOp{}.Add(ops)
 	tStack.Pop()

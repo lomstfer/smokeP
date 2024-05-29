@@ -24,6 +24,13 @@ func newSettingsArea() *SettingsArea {
 }
 
 func (sa *SettingsArea) Layout(gtx layout.Context) layout.Dimensions {
+	{
+		area := clip.Rect(image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)).Push(gtx.Ops)
+		paint.ColorOp{Color: g_theme.Fg}.Add(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+		area.Pop()
+	}
+
 	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
