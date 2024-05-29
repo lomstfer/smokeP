@@ -46,14 +46,17 @@ func (pb *PixelBoard) Size() f32.Point {
 	return f32.Pt(defaultBoardWidth*pb.scale, defaultBoardHeight*pb.scale)
 }
 
-func (pb *PixelBoard) Draw(editingAreaCenter f32.Point, ops *op.Ops) {
+func (pb *PixelBoard) Update(editingAreaCenter f32.Point) {
 	pb.position = pb.distanceMoved.Add(editingAreaCenter)
+}
 
+func (pb *PixelBoard) Draw(ops *op.Ops) {
 	imgOp := paint.NewImageOp(pb.pixelImg)
 	imgOp.Filter = paint.FilterNearest
 	imgOp.Add(ops)
-
-	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(pb.position)).Push(ops)
+	
+	intPosition := f32.Pt(float32(int(pb.position.X)), float32(int(pb.position.Y)))
+	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(intPosition)).Push(ops)
 	paint.PaintOp{}.Add(ops)
 	tStack.Pop()
 }

@@ -98,9 +98,11 @@ func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
 
 	ea.board.distanceMoved = ea.board.distanceMoved.Add(dragAccumulation)
 
+	ea.board.Update(ea.center)
+
 	ea.drawBoardBackground(gtx.Ops)
 
-	ea.board.Draw(ea.center, gtx.Ops)
+	ea.board.Draw(gtx.Ops)
 
 	area.Pop()
 
@@ -108,9 +110,9 @@ func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
 }
 
 func (ea *EditingArea) drawBoardBackground(ops *op.Ops) {
-	bpos := ea.board.position.Round()
-	bsize := ea.board.Size().Round()
-	area := clip.Rect(image.Rect(bpos.X, bpos.Y, bpos.X + bsize.X, bpos.Y + bsize.Y)).Push(ops)
+	boardIntPosition := image.Pt(int(ea.board.position.X), int(ea.board.position.Y))
+	bsize := image.Pt(int(ea.board.Size().X), int(ea.board.Size().Y))
+	area := clip.Rect(image.Rect(boardIntPosition.X, boardIntPosition.Y, boardIntPosition.X + bsize.X, boardIntPosition.Y + bsize.Y)).Push(ops)
 
 	boardBgImgOp := paint.NewImageOp(ea.boardBackground)
 	boardBgImgOp.Filter = paint.FilterNearest
