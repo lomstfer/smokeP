@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"image"
+	"image/color"
 	"io"
 	"math"
 	"os"
@@ -41,6 +42,32 @@ func ClampInt(x int, min int, max int) int {
         return max
     }
     return x
+}
+
+func GenerateGridImage(width, height int, color1 color.NRGBA, color2 color.NRGBA) *image.NRGBA {
+	img := image.NewNRGBA(image.Rect(0, 0, width, height))
+	doColor1 := false
+	for i := 0; i < len(img.Pix); i += 4 {
+		if (i / 4 % width == 0) {
+			doColor1 = !doColor1
+		}
+
+		if doColor1 {
+			img.Pix[i] = color1.R
+			img.Pix[i + 1] = color1.G
+			img.Pix[i + 2] = color1.B
+			img.Pix[i + 3] = color1.A
+		} else {
+			img.Pix[i] = color2.R
+			img.Pix[i + 1] = color2.G
+			img.Pix[i + 2] = color2.B
+			img.Pix[i + 3] = color2.A
+		}
+
+		doColor1 = !doColor1
+	}
+
+	return img
 }
 
 // func getPixelData(img image.Image) *image.NRGBA {

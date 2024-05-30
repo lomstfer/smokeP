@@ -2,6 +2,8 @@ package main
 
 import (
 	"image"
+	"image/color"
+	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -23,36 +25,9 @@ type EditingArea struct {
 func newEditingArea() *EditingArea {
 	ea := &EditingArea{}
 	ea.board = newPixelBoard()
-	ea.boardBackground = paint.NewImageOp(generateBoardBackground())
+	ea.boardBackground = paint.NewImageOp(utils.GenerateGridImage(100, 100, color.NRGBA{200, 200, 200, 255}, color.NRGBA{100, 100, 100, 255}))
 	ea.boardBackground.Filter = paint.FilterNearest
 	return ea
-}
-
-func generateBoardBackground() *image.NRGBA {
-	const pixelRow = 100
-	img := image.NewNRGBA(image.Rect(0, 0, pixelRow, pixelRow))
-	light := false
-	for i := 0; i < len(img.Pix); i += 4 {
-		if (i / 4 % pixelRow == 0) {
-			light = !light
-		}
-
-		if light {
-			img.Pix[i] = 200
-			img.Pix[i + 1] = 200
-			img.Pix[i + 2] = 200
-			img.Pix[i + 3] = 255
-		} else {
-			img.Pix[i] = 100
-			img.Pix[i + 1] = 100
-			img.Pix[i + 2] = 100
-			img.Pix[i + 3] = 255
-		}
-
-		light = !light
-	}
-
-	return img
 }
 
 func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
