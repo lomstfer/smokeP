@@ -15,7 +15,7 @@ var g_theme *material.Theme
 func main() {
 	go func() {
 		window := new(app.Window)
-		window.Option(app.Size(1280, 720))
+		window.Option(app.Size(1280, 720), app.Title("smokeP"))
 
 		err := run(window)
 		if err != nil {

@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"math"
 	"math/rand"
-	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/op"
@@ -20,11 +19,11 @@ const (
 
 type PixelBoard struct {
 	pixelImg      *image.NRGBA
+	pixelImgOp    paint.ImageOp
 	distanceMoved f32.Point
 	position      f32.Point
 	scale         float32
 	drawingColor  color.NRGBA
-	bgImage       paint.ImageOp
 }
 
 func newPixelBoard() *PixelBoard {
@@ -34,16 +33,17 @@ func newPixelBoard() *PixelBoard {
 	for i := range pb.pixelImg.Pix {
 		pb.pixelImg.Pix[i] = uint8(rand.Intn(255))
 	}
+	pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
+	pb.pixelImgOp.Filter = paint.FilterNearest
 
 	pb.scale = 20
-	pb.bgImage = paint.NewImageOp(utils.LoadImage("transp.jpg"))
 	pb.distanceMoved = pb.Size().Div(-2)
 
 	return pb
 }
 
 func (pb *PixelBoard) Size() f32.Point {
-	return f32.Pt(defaultBoardWidth*pb.scale, defaultBoardHeight*pb.scale)
+	return f32.Pt(float32(pb.pixelImgOp.Size().X)*pb.scale, float32(pb.pixelImgOp.Size().Y)*pb.scale)
 }
 
 func (pb *PixelBoard) Update(editingAreaCenter f32.Point) {
@@ -51,10 +51,8 @@ func (pb *PixelBoard) Update(editingAreaCenter f32.Point) {
 }
 
 func (pb *PixelBoard) Draw(ops *op.Ops) {
-	imgOp := paint.NewImageOp(pb.pixelImg)
-	imgOp.Filter = paint.FilterNearest
-	imgOp.Add(ops)
-	
+	pb.pixelImgOp.Add(ops)
+
 	intPosition := f32.Pt(float32(int(pb.position.X)), float32(int(pb.position.Y)))
 	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(pb.scale, pb.scale)).Offset(intPosition)).Push(ops)
 	paint.PaintOp{}.Add(ops)
@@ -71,6 +69,9 @@ func (pb *PixelBoard) CheckIfOnBoardAndDraw(mousePos f32.Point) {
 		rel := mousePos.Sub(pb.position).Div(pb.scale)
 		pixelCoord := image.Pt(int(rel.X), int(rel.Y))
 		pb.pixelImg.SetNRGBA(pixelCoord.X, pixelCoord.Y, pb.drawingColor)
+
+		pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
+		pb.pixelImgOp.Filter = paint.FilterNearest
 	}
 }
 
@@ -88,6 +89,6 @@ func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePo
 		ratioX*scaleChange*defaultBoardWidth,
 		ratioY*scaleChange*defaultBoardHeight,
 	))
-	
+
 	pb.position = pb.distanceMoved.Add(editingAreaCenter)
 }
