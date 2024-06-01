@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"smokep/colorPicker"
 
@@ -26,17 +27,21 @@ func (sa *SettingsArea) Layout(gtx layout.Context) layout.Dimensions {
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 			area := clip.Rect(r).Push(gtx.Ops)
+			area.Pop()
+			d := sa.colorPicker.Layout(g_theme, gtx)
+			if sa.colorPicker.PickedNewColor {
+				fmt.Println(sa.colorPicker.ChosenColor)
+			}
+			return d 
+		}),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
+			area := clip.Rect(r).Push(gtx.Ops)
 			paint.ColorOp{Color: sa.colorPicker.ChosenColor}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
 			area.Pop()
 			
 			return layout.Dimensions{Size: gtx.Constraints.Max}
-		}),
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
-			area := clip.Rect(r).Push(gtx.Ops)
-			area.Pop()
-			return sa.colorPicker.Layout(g_theme, gtx)
 		}),
 	)
 	
