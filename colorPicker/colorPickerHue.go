@@ -46,19 +46,19 @@ func newColorPickerHue(size image.Point) *ColorPickerHue {
 }
 
 func (cph *ColorPickerHue) Layout(gtx layout.Context) layout.Dimensions {
-	cph.pickedNewColor = false
-
-	cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || cph.size != gtx.Constraints.Max
 	cph.size = gtx.Constraints.Max
 	cph.partLength = float32(cph.size.X) / float32(len(cph.colors)-1)
-
+	cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || cph.size != gtx.Constraints.Max
+	
 	cph.HandleInput(gtx)
 	cph.Draw(gtx)
-
+	
 	return layout.Dimensions{Size: cph.size}
 }
 
 func (cph *ColorPickerHue) HandleInput(gtx layout.Context) {
+	cph.pickedNewColor = false
+
 	r := image.Rect(0, 0, cph.size.X, cph.size.Y)
 	area := clip.Rect(r).Push(gtx.Ops)
 

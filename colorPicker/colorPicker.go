@@ -12,7 +12,6 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
-	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
@@ -45,6 +44,73 @@ func NewColorPicker(size image.Point) *ColorPicker {
 }
 
 func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
+	cp.PickedNewColor = false
+
+	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			d := cp.hue.Layout(gtx)
+			if cp.hue.pickedNewColor {
+				cp.updateColors()
+			}
+			return d
+		}),
+		layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
+			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)
+			if cp.valSat.pickedNewColor {
+				cp.updateColors()
+			}
+
+			return d
+		}),
+		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
+			d := cp.alpha.Layout(cp.ChosenColor, gtx)
+			if cp.alpha.pickedNewColor {
+				cp.updateColors()
+			}
+
+			return d
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					for {
+						ev, ok := cp.rgbaEditor.Update(gtx)
+						if !ok {
+							break
+						}
+						e, ok := ev.(widget.SubmitEvent)
+						if !ok {
+							continue
+						}
+						fmt.Println(e.Text)
+						gtx.Execute(key.FocusCmd{Tag: nil})
+						cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+						cp.setPickersToColor(color.NRGBA{100, 200, 200, 255})
+					}
+
+					return material.Editor(theme, &cp.rgbaEditor, "").Layout(gtx)
+				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					for {
+						ev, ok := cp.hexEditor.Update(gtx)
+						if !ok {
+							break
+						}
+						e, ok := ev.(widget.SubmitEvent)
+						if !ok {
+							continue
+						}
+						fmt.Println(e.Text)
+						gtx.Execute(key.FocusCmd{Tag: nil})
+						cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+					}
+
+					return material.Editor(theme, &cp.hexEditor, "").Layout(gtx)
+				}),
+			)
+		}),
+	)
+	
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			d := cp.hue.Layout(gtx)
@@ -150,8 +216,8 @@ func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
 }
 
 func drawPicker(position f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
-	DrawCircleOutline(gtx, position, float32(unit.Dp(6)), 2, color.NRGBA{255, 255, 255, 255})
-	DrawCircleOutline(gtx, position, float32(unit.Dp(4)), 2, color.NRGBA{0, 0, 0, 255})
+	DrawCircleOutline(gtx, position, 10, 2, color.NRGBA{255, 255, 255, 255})
+	DrawCircleOutline(gtx, position, 8, 2, color.NRGBA{0, 0, 0, 255})
 }
 
 func DrawCircleOutline(gtx layout.Context, center f32.Point, radius float32, strokeWidth float32, col color.NRGBA) {
