@@ -1,0 +1,6 @@
+features:
+    * save image
+    * load image
+    * change size of canvas
+    * save colors
+    * tools (bucket, pick color etc.)

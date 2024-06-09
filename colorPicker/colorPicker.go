@@ -80,11 +80,10 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 						if !ok {
 							break
 						}
-						e, ok := ev.(widget.SubmitEvent)
+						_, ok = ev.(widget.SubmitEvent)
 						if !ok {
 							continue
 						}
-						fmt.Println(e.Text)
 						gtx.Execute(key.FocusCmd{Tag: nil})
 
 						{
@@ -111,11 +110,10 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 						if !ok {
 							break
 						}
-						e, ok := ev.(widget.SubmitEvent)
+						_, ok = ev.(widget.SubmitEvent)
 						if !ok {
 							continue
 						}
-						fmt.Println(e.Text)
 						gtx.Execute(key.FocusCmd{Tag: nil})
 
 						{
