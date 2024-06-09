@@ -6,10 +6,12 @@ import (
 	"image/color"
 	"math"
 	"smokep/utils"
+	"time"
 
 	"gioui.org/f32"
 	"gioui.org/io/key"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget"
@@ -36,7 +38,7 @@ func NewColorPicker(size image.Point) *ColorPicker {
 	cp.alpha = newColorPickerAlpha(cp.ChosenColor, size)
 
 	cp.rgbaEditor = widget.Editor{Submit: true, ReadOnly: false}
-	cp.hexEditor = widget.Editor{Submit: true, ReadOnly: true}
+	cp.hexEditor = widget.Editor{Submit: true, ReadOnly: false}
 	cp.rgbaEditor.SetText("rgba(255, 255, 255, 255)")
 	cp.hexEditor.SetText("#ffffffff")
 
@@ -46,83 +48,18 @@ func NewColorPicker(size image.Point) *ColorPicker {
 func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
 	cp.PickedNewColor = false
 
-	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			d := cp.hue.Layout(gtx)
-			if cp.hue.pickedNewColor {
-				cp.updateColors()
-			}
-			return d
-		}),
-		layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
-			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)
-			if cp.valSat.pickedNewColor {
-				cp.updateColors()
-			}
-
-			return d
-		}),
-		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			d := cp.alpha.Layout(cp.ChosenColor, gtx)
-			if cp.alpha.pickedNewColor {
-				cp.updateColors()
-			}
-
-			return d
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					for {
-						ev, ok := cp.rgbaEditor.Update(gtx)
-						if !ok {
-							break
-						}
-						e, ok := ev.(widget.SubmitEvent)
-						if !ok {
-							continue
-						}
-						fmt.Println(e.Text)
-						gtx.Execute(key.FocusCmd{Tag: nil})
-						cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-						cp.setPickersToColor(color.NRGBA{100, 200, 200, 255})
-					}
-
-					return material.Editor(theme, &cp.rgbaEditor, "").Layout(gtx)
-				}),
-				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-					for {
-						ev, ok := cp.hexEditor.Update(gtx)
-						if !ok {
-							break
-						}
-						e, ok := ev.(widget.SubmitEvent)
-						if !ok {
-							continue
-						}
-						fmt.Println(e.Text)
-						gtx.Execute(key.FocusCmd{Tag: nil})
-						cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-					}
-
-					return material.Editor(theme, &cp.hexEditor, "").Layout(gtx)
-				}),
-			)
-		}),
-	)
-	
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			d := cp.hue.Layout(gtx)
 			if cp.hue.pickedNewColor {
-				cp.updateColors()
+				cp.updateColors(gtx)
 			}
 			return d
 		}),
 		layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
 			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)
 			if cp.valSat.pickedNewColor {
-				cp.updateColors()
+				cp.updateColors(gtx)
 			}
 
 			return d
@@ -130,7 +67,7 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			d := cp.alpha.Layout(cp.ChosenColor, gtx)
 			if cp.alpha.pickedNewColor {
-				cp.updateColors()
+				cp.updateColors(gtx)
 			}
 
 			return d
@@ -149,8 +86,21 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 						}
 						fmt.Println(e.Text)
 						gtx.Execute(key.FocusCmd{Tag: nil})
+
+						{
+							input := cp.rgbaEditor.Text()
+							var r, g, b, a uint8
+							_, err := fmt.Sscanf(input, "rgba(%d, %d, %d, %d)", &r, &g, &b, &a)
+							if err == nil {
+								cp.ChosenColor = color.NRGBA{r, g, b, a}
+								values := []uint8{r, g, b, a}
+								fmt.Println(values)
+							}
+						}
+
 						cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-						cp.setPickersToColor(color.NRGBA{100, 200, 200, 255})
+						cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+						cp.setPickersToColor(cp.ChosenColor, gtx)
 					}
 
 					return material.Editor(theme, &cp.rgbaEditor, "").Layout(gtx)
@@ -167,7 +117,21 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 						}
 						fmt.Println(e.Text)
 						gtx.Execute(key.FocusCmd{Tag: nil})
+
+						{
+							input := cp.hexEditor.Text()
+							var r, g, b, a uint8
+							_, err := fmt.Sscanf(input, "#%02x%02x%02x%02x", &r, &g, &b, &a)
+							if err == nil {
+								cp.ChosenColor = color.NRGBA{r, g, b, a}
+								values := []uint8{r, g, b, a}
+								fmt.Println(values)
+							}
+						}
+
+						cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 						cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+						cp.setPickersToColor(cp.ChosenColor, gtx)
 					}
 
 					return material.Editor(theme, &cp.hexEditor, "").Layout(gtx)
@@ -182,7 +146,7 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 	return d
 }
 
-func (cp *ColorPicker) updateColors() {
+func (cp *ColorPicker) updateColors(gtx layout.Context) {
 	cp.PickedNewColor = true
 	cp.valSat.updateChosenColor(cp.hue.chosenColor)
 	cp.alpha.updateChosenColor(cp.valSat.chosenColor)
@@ -195,14 +159,17 @@ func (cp *ColorPicker) updateColors() {
 	if !cp.hexEditorFocus {
 		cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 	}
+
+	gtx.Execute(op.InvalidateCmd{At: time.Time{}})
 }
 
-func (cp *ColorPicker) setPickersToColor(newColor color.NRGBA) {
+func (cp *ColorPicker) setPickersToColor(newColor color.NRGBA, gtx layout.Context) {
 	cp.hue.updateColor(newColor)
 	cp.valSat.updateColor(newColor, cp.hue.chosenColor)
 	cp.alpha.updateColor(cp.valSat.chosenColor, newColor.A)
 	cp.ChosenColor = cp.valSat.chosenColor
 	cp.ChosenColor.A = cp.alpha.chosenAlpha
+	gtx.Execute(op.InvalidateCmd{At: time.Time{}})
 }
 
 func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {

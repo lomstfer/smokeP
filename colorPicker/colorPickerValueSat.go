@@ -93,6 +93,7 @@ func (cpvs *ColorPickerValueSat) updateChosenColor(hueColor color.NRGBA) {
 
 func (cpvs *ColorPickerValueSat) updateColor(newColor color.NRGBA, newHueColor color.NRGBA) {
 	cpvs.pickFractionPos = cpvs.getPositionFractionFromColor(newColor)
+	cpvs.triggerRenderImageUpdate = cpvs.triggerRenderImageUpdate || newHueColor != cpvs.chosenColor
 	cpvs.chosenColor = newColor
 	cpvs.chosenColor.A = 255
 }

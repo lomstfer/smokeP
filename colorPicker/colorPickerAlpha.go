@@ -39,7 +39,7 @@ func newColorPickerAlpha(opaqueChosenColor color.NRGBA, size image.Point) *Color
 
 func (cpa *ColorPickerAlpha) Layout(opaqueChosenColor color.NRGBA, gtx layout.Context) layout.Dimensions {
 	cpa.pickedNewColor = false
-	
+
 	cpa.triggerRenderImageUpdate = cpa.triggerRenderImageUpdate || cpa.size != gtx.Constraints.Max
 	cpa.size = gtx.Constraints.Max
 
