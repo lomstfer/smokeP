@@ -112,3 +112,13 @@ func RgbToHsv(r, g, b uint8) (h, s, v float64) {
 
     return h, s, v
 }
+
+func IsLight(c color.NRGBA) bool {
+    r := float64(c.R) / 255.0
+    g := float64(c.G) / 255.0
+    b := float64(c.B) / 255.0
+
+    luminance := 0.299*r + 0.587*g + 0.114*b
+
+    return luminance > 0.5
+}

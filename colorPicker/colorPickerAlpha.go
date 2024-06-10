@@ -10,7 +10,6 @@ import (
 	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 )
@@ -103,8 +102,6 @@ func (cpa *ColorPickerAlpha) getPickerPositionClamped() float32 {
 }
 
 func (cpa *ColorPickerAlpha) Draw(opaqueChosenColor color.NRGBA, gtx layout.Context) {
-	cpa.drawBackground(gtx.Ops)
-
 	grect := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 
 	if cpa.triggerRenderImageUpdate {
@@ -132,17 +129,4 @@ func (cpa *ColorPickerAlpha) Draw(opaqueChosenColor color.NRGBA, gtx layout.Cont
 func (cpa *ColorPickerAlpha) getColorFromPosition(x float32) uint8 {
 	alpha := lerpColor(color.NRGBA{0, 0, 0, 255}, color.NRGBA{0, 0, 0, 0}, float64(x)/float64(cpa.size.X)).A
 	return alpha
-}
-
-func (cpa *ColorPickerAlpha) drawBackground(ops *op.Ops) {
-	area := clip.Rect(image.Rect(0, 0, cpa.size.X, cpa.size.Y)).Push(ops)
-
-	cpa.background.Add(ops)
-
-	scale := max(float32(cpa.size.X)/float32(cpa.background.Size().X), float32(cpa.size.Y)/float32(cpa.background.Size().Y))
-	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(scale, scale))).Push(ops)
-	paint.PaintOp{}.Add(ops)
-	tStack.Pop()
-
-	area.Pop()
 }

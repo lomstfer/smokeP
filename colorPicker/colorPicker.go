@@ -73,6 +73,13 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 			return d
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			{
+				r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
+				area := clip.Rect(r).Push(gtx.Ops)
+				paint.ColorOp{Color: theme.Bg}.Add(gtx.Ops)
+				paint.PaintOp{}.Add(gtx.Ops)
+				area.Pop()
+			}
 			return layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					for {
@@ -92,8 +99,6 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 							_, err := fmt.Sscanf(input, "rgba(%d, %d, %d, %d)", &r, &g, &b, &a)
 							if err == nil {
 								cp.ChosenColor = color.NRGBA{r, g, b, a}
-								values := []uint8{r, g, b, a}
-								fmt.Println(values)
 							}
 						}
 
@@ -122,8 +127,6 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 							_, err := fmt.Sscanf(input, "#%02x%02x%02x%02x", &r, &g, &b, &a)
 							if err == nil {
 								cp.ChosenColor = color.NRGBA{r, g, b, a}
-								values := []uint8{r, g, b, a}
-								fmt.Println(values)
 							}
 						}
 
@@ -152,12 +155,14 @@ func (cp *ColorPicker) updateColors(gtx layout.Context) {
 	cp.ChosenColor.A = cp.alpha.chosenAlpha
 
 	if !cp.rgbaEditorFocus {
-		cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+		gtx.Execute(key.FocusCmd{Tag: nil})
 	}
 	if !cp.hexEditorFocus {
-		cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+		gtx.Execute(key.FocusCmd{Tag: nil})
 	}
-
+	cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+	cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+	
 	gtx.Execute(op.InvalidateCmd{At: time.Time{}})
 }
 

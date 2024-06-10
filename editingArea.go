@@ -2,8 +2,6 @@ package main
 
 import (
 	"image"
-	"image/color"
-	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -19,14 +17,11 @@ type EditingArea struct {
 	board           *PixelBoard
 	size            image.Point
 	center          f32.Point
-	boardBackground paint.ImageOp
 }
 
 func newEditingArea() *EditingArea {
 	ea := &EditingArea{}
 	ea.board = newPixelBoard()
-	ea.boardBackground = paint.NewImageOp(utils.GenerateGridImage(100, 100, color.NRGBA{200, 200, 200, 255}, color.NRGBA{100, 100, 100, 255}))
-	ea.boardBackground.Filter = paint.FilterNearest
 	return ea
 }
 
@@ -88,15 +83,32 @@ func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
 func (ea *EditingArea) drawBoardBackground(ops *op.Ops) {
 	boardIntPosition := image.Pt(int(ea.board.position.X), int(ea.board.position.Y))
 	bsize := image.Pt(int(ea.board.Size().X), int(ea.board.Size().Y))
-	area := clip.Rect(image.Rect(boardIntPosition.X, boardIntPosition.Y, boardIntPosition.X+bsize.X, boardIntPosition.Y+bsize.Y)).Push(ops)
+	bgCol := g_theme.Bg
 
-	ea.boardBackground.Add(ops)
+	{
+		area := clip.Rect(image.Rect(0, 0, ea.size.X, boardIntPosition.Y)).Push(ops)
+		paint.ColorOp{Color: bgCol}.Add(ops)
+		paint.PaintOp{}.Add(ops)
+		area.Pop()
+	}
+	{
+		area := clip.Rect(image.Rect(0, boardIntPosition.Y + bsize.Y, ea.size.X, ea.size.Y)).Push(ops)
+		paint.ColorOp{Color: bgCol}.Add(ops)
+		paint.PaintOp{}.Add(ops)
+		area.Pop()
+	}
 
-	scale := max(float32(ea.size.X)/float32(ea.boardBackground.Size().X), float32(ea.size.Y)/float32(ea.boardBackground.Size().Y))
-	pos := ea.center.Sub(f32.Pt(float32(ea.boardBackground.Size().X)*scale, float32(ea.boardBackground.Size().Y)*scale).Div(2))
-	tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(scale, scale)).Offset(pos)).Push(ops)
-	paint.PaintOp{}.Add(ops)
-	tStack.Pop()
 
-	area.Pop()
+	{
+		area := clip.Rect(image.Rect(0, boardIntPosition.Y, boardIntPosition.X, boardIntPosition.Y + bsize.Y)).Push(ops)
+		paint.ColorOp{Color: bgCol}.Add(ops)
+		paint.PaintOp{}.Add(ops)
+		area.Pop()
+	}
+	{
+		area := clip.Rect(image.Rect(boardIntPosition.X + bsize.X, boardIntPosition.Y, ea.size.X, boardIntPosition.Y + bsize.Y)).Push(ops)
+		paint.ColorOp{Color: bgCol}.Add(ops)
+		paint.PaintOp{}.Add(ops)
+		area.Pop()
+	}
 }
