@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"math/rand"
 
 	"gioui.org/f32"
 	"gioui.org/op"
@@ -12,7 +11,7 @@ import (
 )
 
 const (
-	zoomMultiplier     = 0.001
+	zoomMultiplier     = 0.01
 	defaultBoardWidth  = 8
 	defaultBoardHeight = 8
 )
@@ -29,17 +28,17 @@ type PixelBoard struct {
 func newPixelBoard() *PixelBoard {
 	pb := &PixelBoard{}
 
-	pb.pixelImg = image.NewNRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight))
-	for i := range pb.pixelImg.Pix {
-		pb.pixelImg.Pix[i] = uint8(rand.Intn(255))
-	}
-	pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
-	pb.pixelImgOp.Filter = paint.FilterNearest
-
-	pb.scale = 20
-	pb.distanceMoved = pb.Size().Div(-2)
+	pb.setToNewImage(image.NewNRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight)))
 
 	return pb
+}
+
+func (pb *PixelBoard) setToNewImage(newImage *image.NRGBA) {
+	pb.pixelImg = newImage
+	pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
+	pb.pixelImgOp.Filter = paint.FilterNearest
+	pb.scale = 640.0 / float32(math.Sqrt(float64(newImage.Rect.Dx()*newImage.Rect.Dx())+float64(newImage.Rect.Dy()*newImage.Rect.Dy())))
+	pb.distanceMoved = pb.Size().Div(-2)
 }
 
 func (pb *PixelBoard) Size() f32.Point {
@@ -77,8 +76,7 @@ func (pb *PixelBoard) CheckIfOnBoardAndDraw(mousePos f32.Point) {
 
 func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePos f32.Point) {
 	size := pb.Size()
-	sizeNum := math.Sqrt(float64(size.X*size.X) + float64(size.Y*size.Y))
-	scaleChange := -scrollY * zoomMultiplier * float32(sizeNum)
+	scaleChange := -scrollY * zoomMultiplier * pb.scale
 	pb.scale += scaleChange
 
 	mouseRelBoard := mousePos.Sub(pb.position)
@@ -86,8 +84,8 @@ func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePo
 	ratioX := mouseRelBoard.X / size.X
 	ratioY := mouseRelBoard.Y / size.Y
 	pb.distanceMoved = pb.distanceMoved.Sub(f32.Pt(
-		ratioX*scaleChange*defaultBoardWidth,
-		ratioY*scaleChange*defaultBoardHeight,
+		ratioX*scaleChange*float32(pb.pixelImgOp.Size().X),
+		ratioY*scaleChange*float32(pb.pixelImgOp.Size().Y),
 	))
 
 	pb.position = pb.distanceMoved.Add(editingAreaCenter)

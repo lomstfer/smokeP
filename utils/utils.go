@@ -5,29 +5,46 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
+	"image/png"
 	"io"
 	"math"
 	"os"
 )
 
-func LoadImage(name string) image.Image {
+func LoadImage(name string) *image.NRGBA {
 	file, err := os.Open(name)
 	if err != nil {
 		fmt.Println(err)
+		return nil
 	}
 	defer file.Close()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
 		fmt.Println(err)
+		return nil
 	}
 
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		fmt.Println(err)
+		return nil
 	}
 
-	return img
+	var nrgba *image.NRGBA
+
+	switch img := img.(type) {
+	case *image.RGBA:
+		nrgba = image.NewNRGBA(img.Bounds())
+		draw.Draw(nrgba, nrgba.Bounds(), img, img.Bounds().Min, draw.Src)
+	case *image.NRGBA:
+		nrgba = img
+	default:
+		fmt.Println("Unsupported image type")
+	}
+
+	return nrgba
 }
 
 func Clamp(x float64, min float64, max float64) float64 {
@@ -121,4 +138,19 @@ func IsLight(c color.NRGBA) bool {
     luminance := 0.299*r + 0.587*g + 0.114*b
 
     return luminance > 0.5
+}
+
+func SaveImageToFile(img *image.NRGBA, path string) error {
+    file, err := os.Create(path)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+
+    err = png.Encode(file, img)
+	if err != nil {
+        return err
+    }
+
+    return nil
 }

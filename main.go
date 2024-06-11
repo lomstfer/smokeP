@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -14,6 +15,7 @@ import (
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 	"gioui.org/widget/material"
+	"github.com/sqweek/dialog"
 )
 
 var g_theme *material.Theme
@@ -42,6 +44,32 @@ func run(window *app.Window) error {
 
 	editingArea := newEditingArea()
 	settingsArea := newSettingsArea()
+	go func() {
+		for {
+			select {
+			case <-settingsArea.SaveButtonClicked:
+				filePath, err := dialog.File().Title("").Filter("PNG image file", "png").SetStartFile("export.png").Save()
+				if err != nil {
+					fmt.Println("Error:", err)
+				} else {
+					utils.SaveImageToFile(editingArea.board.pixelImg, filePath)
+				}
+			case <-settingsArea.LoadButtonClicked:
+				filePath, err := dialog.File().Title("").Filter("PNG image file", "png").Load()
+				if err != nil {
+					fmt.Println("Error:", err)
+				} else {
+					img := utils.LoadImage(filePath)
+					if img == nil {
+						fmt.Println("rip")
+						break
+					}
+					editingArea.board.setToNewImage(img)
+					window.Invalidate()
+				}
+			}
+		}
+	}()
 
 	background := paint.NewImageOp(utils.GenerateGridImage(160, 90, color.NRGBA{200, 200, 200, 255}, color.NRGBA{100, 100, 100, 255}))
 	background.Filter = paint.FilterNearest
@@ -56,20 +84,20 @@ func run(window *app.Window) error {
 			{
 				r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 				area := clip.Rect(r).Push(gtx.Ops)
-	
+
 				background.Add(gtx.Ops)
-	
+
 				scale := max(float32(r.Dx())/float32(background.Size().X), float32(r.Dy())/float32(background.Size().Y))
 				tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(scale, scale))).Push(gtx.Ops)
 				paint.PaintOp{}.Add(gtx.Ops)
 				tStack.Pop()
-	
+
 				area.Pop()
 			}
 
 			layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return settingsArea.Layout(gtx)
+					return settingsArea.Layout(g_theme, gtx)
 				}),
 				layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
 					editingArea.board.drawingColor = settingsArea.colorPicker.ChosenColor

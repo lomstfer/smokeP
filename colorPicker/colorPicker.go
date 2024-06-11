@@ -162,7 +162,7 @@ func (cp *ColorPicker) updateColors(gtx layout.Context) {
 	}
 	cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 	cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-	
+
 	gtx.Execute(op.InvalidateCmd{At: time.Time{}})
 }
 
