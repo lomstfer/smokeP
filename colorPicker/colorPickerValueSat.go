@@ -38,18 +38,17 @@ func newColorPickerValueSat(hueColor color.NRGBA, size image.Point) *ColorPicker
 }
 
 func (cpvs *ColorPickerValueSat) Layout(hueColor color.NRGBA, gtx layout.Context) layout.Dimensions {
-	cpvs.pickedNewColor = false
 
 	cpvs.triggerRenderImageUpdate = cpvs.triggerRenderImageUpdate || cpvs.size != gtx.Constraints.Max
 	cpvs.size = gtx.Constraints.Max
 
-	cpvs.HandleInput(hueColor, gtx)
 	cpvs.Draw(hueColor, gtx)
 
 	return layout.Dimensions{Size: cpvs.size}
 }
 
-func (cpvs *ColorPickerValueSat) HandleInput(hueColor color.NRGBA, gtx layout.Context) {
+func (cpvs *ColorPickerValueSat) Update(hueColor color.NRGBA, gtx layout.Context) {
+	cpvs.pickedNewColor = false
 	r := image.Rect(0, 0, cpvs.size.X, cpvs.size.Y)
 	area := clip.Rect(r).Push(gtx.Ops)
 

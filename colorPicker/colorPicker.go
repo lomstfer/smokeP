@@ -45,30 +45,40 @@ func NewColorPicker(size image.Point) *ColorPicker {
 	return cp
 }
 
+func (cp *ColorPicker) Update(gtx layout.Context) {
+	cp.rgbaEditorFocus = gtx.Focused(&cp.rgbaEditor)
+	cp.hexEditorFocus = gtx.Focused(&cp.hexEditor)
+	
+	cp.hue.Update(gtx)
+	cp.valSat.Update(cp.hue.chosenColor, gtx)
+	cp.alpha.Update(cp.valSat.chosenColor, gtx)
+	cp.updateColors(gtx)
+}
+
 func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
 	cp.PickedNewColor = false
 
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			d := cp.hue.Layout(gtx)
-			if cp.hue.pickedNewColor {
-				cp.updateColors(gtx)
-			}
+			// if cp.hue.pickedNewColor {
+				// cp.updateColors(gtx)
+			// }
 			return d
 		}),
 		layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
 			d := cp.valSat.Layout(cp.hue.chosenColor, gtx)
-			if cp.valSat.pickedNewColor {
-				cp.updateColors(gtx)
-			}
+			// if cp.valSat.pickedNewColor {
+				// cp.updateColors(gtx)
+			// }
 
 			return d
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			d := cp.alpha.Layout(cp.ChosenColor, gtx)
-			if cp.alpha.pickedNewColor {
-				cp.updateColors(gtx)
-			}
+			// if cp.alpha.pickedNewColor {
+				// cp.updateColors(gtx)
+			// }
 
 			return d
 		}),
@@ -141,14 +151,14 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 		}),
 	)
 
-	cp.rgbaEditorFocus = gtx.Focused(&cp.rgbaEditor)
-	cp.hexEditorFocus = gtx.Focused(&cp.hexEditor)
-
 	return d
 }
 
 func (cp *ColorPicker) updateColors(gtx layout.Context) {
-	cp.PickedNewColor = true
+	cp.PickedNewColor = cp.hue.pickedNewColor || cp.valSat.pickedNewColor || cp.alpha.pickedNewColor
+	if !cp.PickedNewColor {
+		return
+	}
 	cp.valSat.updateChosenColor(cp.hue.chosenColor)
 	cp.alpha.updateChosenColor(cp.valSat.chosenColor)
 	cp.ChosenColor = cp.valSat.chosenColor
@@ -163,7 +173,7 @@ func (cp *ColorPicker) updateColors(gtx layout.Context) {
 	cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 	cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 
-	gtx.Execute(op.InvalidateCmd{At: time.Time{}})
+	// gtx.Execute(op.InvalidateCmd{At: time.Time{}})
 }
 
 func (cp *ColorPicker) setPickersToColor(newColor color.NRGBA, gtx layout.Context) {

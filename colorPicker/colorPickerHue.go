@@ -7,10 +7,8 @@ import (
 	"smokep/utils"
 
 	"gioui.org/f32"
-	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 )
 
@@ -45,24 +43,12 @@ func newColorPickerHue(size image.Point) *ColorPickerHue {
 	return cph
 }
 
-func (cph *ColorPickerHue) Layout(gtx layout.Context) layout.Dimensions {
-	cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || cph.size != gtx.Constraints.Max
-	cph.size = gtx.Constraints.Max
-	cph.partLength = float32(cph.size.X) / float32(len(cph.colors)-1)
-	
-	cph.HandleInput(gtx)
-	cph.Draw(gtx)
-	
-	return layout.Dimensions{Size: gtx.Constraints.Max}
-}
-
-func (cph *ColorPickerHue) HandleInput(gtx layout.Context) {
+func (cph *ColorPickerHue) Update(gtx layout.Context) {
 	cph.pickedNewColor = false
-
-	r := image.Rect(0, 0, cph.size.X, cph.size.Y)
-	area := clip.Rect(r).Push(gtx.Ops)
-
-	event.Op(gtx.Ops, cph)
+	
+	// r := image.Rect(0, 0, cph.size.X, cph.size.Y)
+	// area := clip.Rect(r).Push(gtx.Ops)
+	// event.Op(gtx.Ops, cph)
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cph,
@@ -87,7 +73,17 @@ func (cph *ColorPickerHue) HandleInput(gtx layout.Context) {
 		cph.pickedNewColor = true
 	}
 
-	area.Pop()
+	// area.Pop()
+}
+
+func (cph *ColorPickerHue) Layout(gtx layout.Context) layout.Dimensions {
+	cph.triggerRenderImageUpdate = cph.triggerRenderImageUpdate || cph.size != gtx.Constraints.Max
+	cph.size = gtx.Constraints.Max
+	cph.partLength = float32(cph.size.X) / float32(len(cph.colors)-1)
+
+	cph.Draw(gtx)
+
+	return layout.Dimensions{Size: gtx.Constraints.Max}
 }
 
 func (cph *ColorPickerHue) updateChosenColorFromPickerPos(fraction float32) {

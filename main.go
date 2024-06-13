@@ -61,7 +61,7 @@ func run(window *app.Window) error {
 				} else {
 					img := utils.LoadImage(filePath)
 					if img == nil {
-						fmt.Println("rip")
+						fmt.Println("Error loading image")
 						break
 					}
 					editingArea.board.setToNewImage(img)
@@ -94,6 +94,8 @@ func run(window *app.Window) error {
 
 				area.Pop()
 			}
+
+			settingsArea.Update(gtx)
 
 			layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {

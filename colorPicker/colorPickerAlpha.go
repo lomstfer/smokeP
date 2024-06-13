@@ -37,18 +37,17 @@ func newColorPickerAlpha(opaqueChosenColor color.NRGBA, size image.Point) *Color
 }
 
 func (cpa *ColorPickerAlpha) Layout(opaqueChosenColor color.NRGBA, gtx layout.Context) layout.Dimensions {
-	cpa.pickedNewColor = false
 
 	cpa.triggerRenderImageUpdate = cpa.triggerRenderImageUpdate || cpa.size != gtx.Constraints.Max
 	cpa.size = gtx.Constraints.Max
 
-	cpa.HandleInput(opaqueChosenColor, gtx)
 	cpa.Draw(opaqueChosenColor, gtx)
 
 	return layout.Dimensions{Size: cpa.size}
 }
 
-func (cpa *ColorPickerAlpha) HandleInput(opaqueChosenColor color.NRGBA, gtx layout.Context) {
+func (cpa *ColorPickerAlpha) Update(opaqueChosenColor color.NRGBA, gtx layout.Context) {
+	cpa.pickedNewColor = false
 	r := image.Rect(0, 0, cpa.size.X, cpa.size.Y)
 	area := clip.Rect(r).Push(gtx.Ops)
 

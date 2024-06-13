@@ -31,6 +31,10 @@ func newSettingsArea() *SettingsArea {
 	return sa
 }
 
+func (sa *SettingsArea) Update(gtx layout.Context) {
+	sa.colorPicker.Update(gtx)
+}
+
 func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
