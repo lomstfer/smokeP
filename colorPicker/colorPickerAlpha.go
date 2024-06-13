@@ -36,22 +36,8 @@ func newColorPickerAlpha(opaqueChosenColor color.NRGBA, size image.Point) *Color
 	return cpa
 }
 
-func (cpa *ColorPickerAlpha) Layout(opaqueChosenColor color.NRGBA, gtx layout.Context) layout.Dimensions {
-
-	cpa.triggerRenderImageUpdate = cpa.triggerRenderImageUpdate || cpa.size != gtx.Constraints.Max
-	cpa.size = gtx.Constraints.Max
-
-	cpa.Draw(opaqueChosenColor, gtx)
-
-	return layout.Dimensions{Size: cpa.size}
-}
-
-func (cpa *ColorPickerAlpha) Update(opaqueChosenColor color.NRGBA, gtx layout.Context) {
+func (cpa *ColorPickerAlpha) Update(gtx layout.Context) {
 	cpa.pickedNewColor = false
-	r := image.Rect(0, 0, cpa.size.X, cpa.size.Y)
-	area := clip.Rect(r).Push(gtx.Ops)
-
-	event.Op(gtx.Ops, cpa)
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cpa,
@@ -72,11 +58,21 @@ func (cpa *ColorPickerAlpha) Update(opaqueChosenColor color.NRGBA, gtx layout.Co
 		}
 
 		cpa.pickFractionPos = e.Position.X / float32(cpa.size.X)
-		cpa.updateChosenColor(opaqueChosenColor)
 		cpa.pickedNewColor = true
 	}
+}
 
-	area.Pop()
+func (cpa *ColorPickerAlpha) Layout(opaqueChosenColor color.NRGBA, gtx layout.Context) layout.Dimensions {
+	cpa.triggerRenderImageUpdate = cpa.triggerRenderImageUpdate || cpa.size != gtx.Constraints.Max
+	cpa.size = gtx.Constraints.Max
+
+	defer clip.Rect(image.Rect(0, 0, cpa.size.X, cpa.size.Y)).Push(gtx.Ops).Pop()
+
+	cpa.Draw(opaqueChosenColor, gtx)
+
+	event.Op(gtx.Ops, cpa)
+
+	return layout.Dimensions{Size: cpa.size}
 }
 
 func (cpa *ColorPickerAlpha) updateChosenColor(opaqueChosenColor color.NRGBA) {

@@ -4,7 +4,6 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -12,6 +11,7 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/crazy3lf/colorconv"
 )
 
 type ColorPickerValueSat struct {
@@ -37,22 +37,8 @@ func newColorPickerValueSat(hueColor color.NRGBA, size image.Point) *ColorPicker
 	return cpvs
 }
 
-func (cpvs *ColorPickerValueSat) Layout(hueColor color.NRGBA, gtx layout.Context) layout.Dimensions {
-
-	cpvs.triggerRenderImageUpdate = cpvs.triggerRenderImageUpdate || cpvs.size != gtx.Constraints.Max
-	cpvs.size = gtx.Constraints.Max
-
-	cpvs.Draw(hueColor, gtx)
-
-	return layout.Dimensions{Size: cpvs.size}
-}
-
-func (cpvs *ColorPickerValueSat) Update(hueColor color.NRGBA, gtx layout.Context) {
+func (cpvs *ColorPickerValueSat) Update(gtx layout.Context) {
 	cpvs.pickedNewColor = false
-	r := image.Rect(0, 0, cpvs.size.X, cpvs.size.Y)
-	area := clip.Rect(r).Push(gtx.Ops)
-
-	event.Op(gtx.Ops, cpvs)
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cpvs,
@@ -76,11 +62,21 @@ func (cpvs *ColorPickerValueSat) Update(hueColor color.NRGBA, gtx layout.Context
 		cpvs.pickFractionPos = f32.Pt(
 			float32(math.Max(math.Min(float64(cpvs.pickFractionPos.X), 1), 0)),
 			float32(math.Max(math.Min(float64(cpvs.pickFractionPos.Y), 1), 0)))
-		cpvs.updateChosenColor(hueColor)
 		cpvs.pickedNewColor = true
 	}
+}
 
-	area.Pop()
+func (cpvs *ColorPickerValueSat) Layout(hueColor color.NRGBA, gtx layout.Context) layout.Dimensions {
+	cpvs.triggerRenderImageUpdate = cpvs.triggerRenderImageUpdate || cpvs.size != gtx.Constraints.Max
+	cpvs.size = gtx.Constraints.Max
+
+	defer clip.Rect(image.Rect(0, 0, cpvs.size.X, cpvs.size.Y)).Push(gtx.Ops).Pop()
+
+	cpvs.Draw(hueColor, gtx)
+
+	event.Op(gtx.Ops, cpvs)
+
+	return layout.Dimensions{Size: cpvs.size}
 }
 
 func (cpvs *ColorPickerValueSat) updateChosenColor(hueColor color.NRGBA) {
@@ -141,6 +137,6 @@ func (cpvs *ColorPickerValueSat) getColorFromPosition(pos f32.Point, hueColor co
 }
 
 func (cpvs *ColorPickerValueSat) getPositionFractionFromColor(color color.NRGBA) f32.Point {
-	_, s, v := utils.RgbToHsv(color.R, color.G, color.B)
+	_, s, v := colorconv.RGBToHSV(color.R, color.G, color.B)
 	return f32.Pt(float32(s), 1.0-float32(v))
 }

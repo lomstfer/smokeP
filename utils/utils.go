@@ -100,36 +100,6 @@ func GenerateGridImage(width, height int, color1 color.NRGBA, color2 color.NRGBA
 // 	return rgba
 // }
 
-func RgbToHsv(r, g, b uint8) (h, s, v float64) {
-    rFloat := float64(r) / 255.0
-    gFloat := float64(g) / 255.0
-    bFloat := float64(b) / 255.0
-
-    max := math.Max(rFloat, math.Max(gFloat, bFloat))
-    min := math.Min(rFloat, math.Min(gFloat, bFloat))
-    diff := max - min
-
-    if max == min {
-        h = 0
-    } else if max == rFloat {
-        h = (60 * ((gFloat - bFloat) / diff) + 360) / 360.0
-    } else if max == gFloat {
-        h = (60 * ((bFloat - rFloat) / diff) + 120) / 360.0
-    } else if max == bFloat {
-        h = (60 * ((rFloat - gFloat) / diff) + 240) / 360.0
-    }
-
-    if max == 0 {
-        s = 0
-    } else {
-        s = diff / max
-    }
-
-    v = max
-
-    return h, s, v
-}
-
 func IsLight(c color.NRGBA) bool {
     r := float64(c.R) / 255.0
     g := float64(c.G) / 255.0

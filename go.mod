@@ -4,6 +4,7 @@ go 1.22.3
 
 require (
 	gioui.org v0.6.0
+	github.com/crazy3lf/colorconv v1.2.0
 	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627
 )
 

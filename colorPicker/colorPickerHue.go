@@ -7,9 +7,12 @@ import (
 	"smokep/utils"
 
 	"gioui.org/f32"
+	"gioui.org/io/event"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op/clip"
 	"gioui.org/op/paint"
+	"github.com/crazy3lf/colorconv"
 )
 
 type ColorPickerHue struct {
@@ -45,16 +48,14 @@ func newColorPickerHue(size image.Point) *ColorPickerHue {
 
 func (cph *ColorPickerHue) Update(gtx layout.Context) {
 	cph.pickedNewColor = false
-	
-	// r := image.Rect(0, 0, cph.size.X, cph.size.Y)
-	// area := clip.Rect(r).Push(gtx.Ops)
-	// event.Op(gtx.Ops, cph)
+
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cph,
-			Kinds:        pointer.Drag | pointer.Press,
+			Kinds:        pointer.Press | pointer.Drag,
 			ScrollBounds: image.Rect(-10, -10, 10, 10),
 		})
+
 		if !ok {
 			break
 		}
@@ -72,8 +73,6 @@ func (cph *ColorPickerHue) Update(gtx layout.Context) {
 		cph.updateChosenColorFromPickerPos(r)
 		cph.pickedNewColor = true
 	}
-
-	// area.Pop()
 }
 
 func (cph *ColorPickerHue) Layout(gtx layout.Context) layout.Dimensions {
@@ -81,7 +80,11 @@ func (cph *ColorPickerHue) Layout(gtx layout.Context) layout.Dimensions {
 	cph.size = gtx.Constraints.Max
 	cph.partLength = float32(cph.size.X) / float32(len(cph.colors)-1)
 
+	defer clip.Rect(image.Rect(0, 0, cph.size.X, cph.size.Y)).Push(gtx.Ops).Pop()
+
 	cph.Draw(gtx)
+
+	event.Op(gtx.Ops, cph)
 
 	return layout.Dimensions{Size: gtx.Constraints.Max}
 }
@@ -134,8 +137,8 @@ func (cph *ColorPickerHue) getColorFromPosition(x float32) color.NRGBA {
 }
 
 func (cph *ColorPickerHue) getPositionFractionFromColor(col color.NRGBA) float32 {
-	h, _, _ := utils.RgbToHsv(col.R, col.G, col.B)
-	return float32(h)
+	h, _, _ := colorconv.RGBToHSV(col.R, col.G, col.B)
+	return float32(h / 360.0)
 }
 
 func (cph *ColorPickerHue) updateColor(col color.NRGBA) {
