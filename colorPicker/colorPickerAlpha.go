@@ -116,9 +116,7 @@ func (cpa *ColorPickerAlpha) Draw(opaqueChosenColor color.NRGBA, gtx layout.Cont
 	paint.PaintOp{}.Add(gtx.Ops)
 
 	p := cpa.getPickerPositionClamped()
-	alpha := cpa.getColorFromPosition(p)
-	colorResult := color.NRGBA{opaqueChosenColor.R, opaqueChosenColor.G, opaqueChosenColor.B, alpha}
-	drawPicker(f32.Pt(p, float32(cpa.size.Y)/2), colorResult, gtx)
+	drawPicker(f32.Pt(p, float32(cpa.size.Y)/2), gtx)
 }
 
 func (cpa *ColorPickerAlpha) getColorFromPosition(x float32) uint8 {

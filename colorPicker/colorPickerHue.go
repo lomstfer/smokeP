@@ -123,8 +123,7 @@ func (cph *ColorPickerHue) Draw(gtx layout.Context) {
 	paint.PaintOp{}.Add(gtx.Ops)
 
 	p := cph.getPickerPositionClamped()
-	col := cph.getColorFromPosition(p)
-	drawPicker(f32.Pt(p, float32(cph.size.Y)/2), col, gtx)
+	drawPicker(f32.Pt(p, float32(cph.size.Y)/2), gtx)
 }
 
 func (cph *ColorPickerHue) getColorFromPosition(x float32) color.NRGBA {

@@ -123,8 +123,7 @@ func (cpvs *ColorPickerValueSat) Draw(hueColor color.NRGBA, gtx layout.Context) 
 	paint.PaintOp{}.Add(gtx.Ops)
 
 	p := cpvs.getPickerPositionClamped()
-	col := cpvs.getColorFromPosition(p, hueColor)
-	drawPicker(p, col, gtx)
+	drawPicker(p, gtx)
 }
 
 func (cpvs *ColorPickerValueSat) getColorFromPosition(pos f32.Point, hueColor color.NRGBA) color.NRGBA {

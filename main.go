@@ -95,6 +95,7 @@ func run(window *app.Window) error {
 			}
 
 			settingsArea.Update(gtx)
+			editingArea.Update(gtx)
 
 			layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {

@@ -67,7 +67,7 @@ func (cp *ColorPicker) Update(gtx layout.Context) {
 
 		cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 		cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-		cp.setPickersToColor(cp.ChosenColor, gtx)
+		cp.setPickersToColor(cp.ChosenColor)
 	}
 
 	for {
@@ -93,7 +93,7 @@ func (cp *ColorPicker) Update(gtx layout.Context) {
 
 		cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 		cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-		cp.setPickersToColor(cp.ChosenColor, gtx)
+		cp.setPickersToColor(cp.ChosenColor)
 	}
 
 	cp.hue.Update(gtx)
@@ -147,14 +147,14 @@ func (cp *ColorPicker) updateColors(gtx layout.Context) {
 	cp.ChosenColor.A = cp.alpha.chosenAlpha
 
 	if cp.rgbaEditorFocus || cp.hexEditorFocus {
-		gtx.Execute(key.FocusCmd{Tag: nil})
+		gtx.Execute(key.FocusCmd{Tag: cp})
 	}
 
 	cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 	cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 }
 
-func (cp *ColorPicker) setPickersToColor(newColor color.NRGBA, gtx layout.Context) {
+func (cp *ColorPicker) setPickersToColor(newColor color.NRGBA) {
 	cp.hue.updateColor(newColor)
 	cp.valSat.updateColor(newColor, cp.hue.chosenColor)
 	cp.alpha.updateColor(cp.valSat.chosenColor, newColor.A)
@@ -172,7 +172,7 @@ func lerpColor(col1 color.NRGBA, col2 color.NRGBA, t float64) color.NRGBA {
 	}
 }
 
-func drawPicker(position f32.Point, colorAtPosition color.NRGBA, gtx layout.Context) {
+func drawPicker(position f32.Point, gtx layout.Context) {
 	DrawCircleOutline(gtx, position, 10, 2, color.NRGBA{255, 255, 255, 255})
 	DrawCircleOutline(gtx, position, 8, 2, color.NRGBA{0, 0, 0, 255})
 }
