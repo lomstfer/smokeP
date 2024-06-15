@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"smokep/boardactions"
 
 	"gioui.org/f32"
 	"gioui.org/op"
@@ -23,23 +24,31 @@ type PixelBoard struct {
 	position               f32.Point
 	scale                  float32
 	drawingColor           color.NRGBA
-	previousDrawPixelCoord *image.Point
+	previousDrawPixelPoint *image.Point
+	actionList             []boardactions.Action
+	latestActionIndex      int
+	currentDrawAction      *boardactions.DrawAction
 }
 
 func newPixelBoard() *PixelBoard {
 	pb := &PixelBoard{}
 
 	pb.setToNewImage(image.NewNRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight)))
-	pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
-	pb.pixelImgOp.Filter = paint.FilterNearest
+	pb.refreshImage()
+
+	pb.latestActionIndex = -1
 
 	return pb
 }
 
-func (pb *PixelBoard) setToNewImage(newImage *image.NRGBA) {
-	pb.pixelImg = newImage
+func (pb *PixelBoard) refreshImage() {
 	pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
 	pb.pixelImgOp.Filter = paint.FilterNearest
+}
+
+func (pb *PixelBoard) setToNewImage(newImage *image.NRGBA) {
+	pb.pixelImg = newImage
+	pb.refreshImage()
 	pb.scale = 640.0 / float32(math.Sqrt(float64(newImage.Rect.Dx()*newImage.Rect.Dx())+float64(newImage.Rect.Dy()*newImage.Rect.Dy())))
 	pb.distanceMoved = pb.Size().Div(-2)
 }
@@ -69,22 +78,78 @@ func (pb *PixelBoard) OnDraw(mousePos f32.Point) {
 	// 	mousePos.Y < pb.position.Y+size.Y
 
 	rel := mousePos.Sub(pb.position).Div(pb.scale)
-	pixelCoord := image.Pt(int(rel.X), int(rel.Y))
+	pixelPoint := image.Pt(int(rel.X), int(rel.Y))
 
-	if pb.previousDrawPixelCoord != nil {
-		drawLineBetweenPoints(pb.pixelImg, *pb.previousDrawPixelCoord, pixelCoord, pb.drawingColor)
-	} else {
-		pb.pixelImg.SetNRGBA(pixelCoord.X, pixelCoord.Y, pb.drawingColor)
+	if pb.pixelImg.NRGBAAt(pixelPoint.X, pixelPoint.Y) == pb.drawingColor {
+		return
 	}
 
-	pb.pixelImgOp = paint.NewImageOp(pb.pixelImg)
-	pb.pixelImgOp.Filter = paint.FilterNearest
+	if pb.currentDrawAction == nil {
+		pb.currentDrawAction = boardactions.NewDrawAction(nil, pb.drawingColor)
+	}
 
-	pb.previousDrawPixelCoord = &pixelCoord
+	if pb.previousDrawPixelPoint != nil {
+		var points []image.Point
+		{
+			betweenPoints := getLineBetweenPoints(*pb.previousDrawPixelPoint, pixelPoint)
+			for _, p := range betweenPoints {
+				if pb.pixelImg.NRGBAAt(p.X, p.Y) != pb.drawingColor {
+					points = append(points, p)
+				}
+			}
+		}
+		
+		for _, p := range points {
+			pb.currentDrawAction.PreviousPixelcolors[p] = pb.pixelImg.NRGBAAt(p.X, p.Y)
+			pb.pixelImg.SetNRGBA(p.X, p.Y, pb.drawingColor)
+		}
+		pb.currentDrawAction.PixelPoints = append(pb.currentDrawAction.PixelPoints, points...)
+	} else {
+		pb.currentDrawAction.PreviousPixelcolors[pixelPoint] = pb.pixelImg.NRGBAAt(pixelPoint.X, pixelPoint.Y)
+		pb.pixelImg.SetNRGBA(pixelPoint.X, pixelPoint.Y, pb.drawingColor)
+		pb.currentDrawAction.PixelPoints = append(pb.currentDrawAction.PixelPoints, pixelPoint)
+	}
+
+	pb.refreshImage()
+
+	pb.previousDrawPixelPoint = &pixelPoint
 }
 
 func (pb *PixelBoard) OnStopDrawing() {
-	pb.previousDrawPixelCoord = nil
+	pb.previousDrawPixelPoint = nil
+	if pb.currentDrawAction != nil {
+		pb.AddAction(*pb.currentDrawAction)
+	}
+	pb.currentDrawAction = nil
+}
+
+func (pb *PixelBoard) AddAction(action boardactions.Action) {
+	for i := len(pb.actionList) - 1; i > pb.latestActionIndex; i-- {
+		pb.actionList = append(pb.actionList[:i], pb.actionList[i+1:]...)
+	}
+
+	pb.actionList = append(pb.actionList, action)
+	pb.latestActionIndex += 1
+}
+
+func (pb *PixelBoard) Undo() {
+	if pb.latestActionIndex <= -1 {
+		return
+	}
+
+	pb.actionList[pb.latestActionIndex].Undo(pb.pixelImg)
+	pb.refreshImage()
+	pb.latestActionIndex -= 1
+}
+
+func (pb *PixelBoard) Redo() {
+	if len(pb.actionList) == 0 || pb.latestActionIndex == len(pb.actionList)-1 {
+		return
+	}
+
+	pb.actionList[pb.latestActionIndex+1].Do(pb.pixelImg)
+	pb.refreshImage()
+	pb.latestActionIndex += 1
 }
 
 func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePos f32.Point) {
@@ -104,23 +169,27 @@ func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePo
 	pb.position = pb.distanceMoved.Add(editingAreaCenter)
 }
 
-func drawLineBetweenPoints(img *image.NRGBA, p1 image.Point, p2 image.Point, color color.NRGBA) {
+func getLineBetweenPoints(p1 image.Point, p2 image.Point) []image.Point {
+	var points []image.Point
+
 	d := p2.Sub(p1)
 	if int(math.Abs(float64(d.X))) > int(math.Abs(float64(d.Y))) {
 		k := float32(d.Y) / float32(d.X)
-		for i := 0; i <= int(math.Abs(float64(d.X))); i++ {
+		for i := 1; i <= int(math.Abs(float64(d.X))); i++ {
 			x := i * int(float32(d.X)/float32(math.Abs(float64(d.X))))
 			y := int(math.Round(float64(float32(x) * k)))
 			pos := p1.Add(image.Pt(x, y))
-			img.SetNRGBA(pos.X, pos.Y, color)
+			points = append(points, pos)
 		}
 	} else {
 		k := float32(d.X) / float32(d.Y)
-		for i := 0; i <= int(math.Abs(float64(d.Y))); i++ {
+		for i := 1; i <= int(math.Abs(float64(d.Y))); i++ {
 			y := i * int(float32(d.Y)/float32(math.Abs(float64(d.Y))))
 			x := int(math.Round(float64(float32(y) * k)))
 			pos := p1.Add(image.Pt(x, y))
-			img.SetNRGBA(pos.X, pos.Y, color)
+			points = append(points, pos)
 		}
 	}
+
+	return points
 }

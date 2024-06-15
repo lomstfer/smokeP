@@ -5,6 +5,7 @@ import (
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op"
@@ -27,6 +28,50 @@ func newEditingArea() *EditingArea {
 
 func (ea *EditingArea) Update(gtx layout.Context) {
 	dragAccumulation := f32.Point{X: 0, Y: 0}
+
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Required: key.ModCtrl,
+			Name: "Z",
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.board.Undo()
+	}
+
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Required: key.ModCtrl,
+			Name: "Y",
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.board.Redo()
+	}
 
 	for {
 		ev, ok := gtx.Event(pointer.Filter{

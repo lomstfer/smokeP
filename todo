@@ -1,5 +1,4 @@
 features:
-    * draw between mouse updates
     * change size of canvas
     * ctrl-z, ctrl-shift-z/ctrl-y
     * save colors
