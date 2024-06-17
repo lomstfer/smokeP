@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/io/event"
@@ -27,11 +28,13 @@ func newEditingArea() *EditingArea {
 }
 
 func (ea *EditingArea) Update(gtx layout.Context) {
+	utils.FocusSelfOnClick(ea, gtx)
+
 	for {
 		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
+			Focus:    nil,
 			Required: key.ModCtrl,
-			Name: "R",
+			Name:     "R",
 		})
 		if !ok {
 			break
@@ -52,7 +55,6 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 	ea.CheckUndoRedo(gtx)
 
 	dragAccumulation := f32.Point{X: 0, Y: 0}
-
 
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
@@ -95,13 +97,13 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 	ea.board.Update(ea.center)
 }
 
-func (ea *EditingArea) CheckUndoRedo(gtx layout.Context)  {
+func (ea *EditingArea) CheckUndoRedo(gtx layout.Context) {
 	for {
 		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
+			Focus:    nil,
 			Required: key.ModCtrl,
 			Optional: key.ModShift,
-			Name: "Z",
+			Name:     "Z",
 		})
 		if !ok {
 			break
@@ -125,9 +127,9 @@ func (ea *EditingArea) CheckUndoRedo(gtx layout.Context)  {
 
 	for {
 		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
+			Focus:    nil,
 			Required: key.ModCtrl,
-			Name: "Y",
+			Name:     "Y",
 		})
 		if !ok {
 			break
@@ -147,6 +149,12 @@ func (ea *EditingArea) CheckUndoRedo(gtx layout.Context)  {
 }
 
 func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
+	{
+		area := clip.Rect(image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)).Push(gtx.Ops)
+		event.Op(gtx.Ops, ea)
+		area.Pop()
+	}
+
 	ea.size = gtx.Constraints.Max
 	ea.center = f32.Pt(float32(ea.size.X), float32(ea.size.Y)).Div(2)
 	defer clip.Rect(image.Rect(0, 0, ea.size.X, ea.size.Y)).Push(gtx.Ops).Pop()

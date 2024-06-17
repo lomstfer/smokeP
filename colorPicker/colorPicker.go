@@ -141,14 +141,12 @@ func (cp *ColorPicker) updateColors(gtx layout.Context) {
 	if !cp.PickedNewColor {
 		return
 	}
+	gtx.Execute(key.FocusCmd{Tag: cp})
+
 	cp.valSat.updateChosenColor(cp.hue.chosenColor)
 	cp.alpha.updateChosenColor(cp.valSat.chosenColor)
 	cp.ChosenColor = cp.valSat.chosenColor
 	cp.ChosenColor.A = cp.alpha.chosenAlpha
-
-	if cp.rgbaEditorFocus || cp.hexEditorFocus {
-		gtx.Execute(key.FocusCmd{Tag: cp})
-	}
 
 	cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
 	cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))

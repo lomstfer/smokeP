@@ -10,6 +10,10 @@ import (
 	"io"
 	"math"
 	"os"
+
+	"gioui.org/io/key"
+	"gioui.org/io/pointer"
+	"gioui.org/layout"
 )
 
 func LoadImage(name string) *image.NRGBA {
@@ -148,4 +152,25 @@ func GetLineBetweenPoints(p1 image.Point, p2 image.Point) []image.Point {
 	}
 
 	return points
+}
+
+func FocusSelfOnClick(selfTag interface{}, gtx layout.Context) {
+	for {
+		ev, ok := gtx.Event(pointer.Filter{
+			Target:       selfTag,
+			Kinds:        pointer.Press,
+		})
+		if !ok {
+			break
+		}
+		e, ok := ev.(pointer.Event)
+		if !ok {
+			continue
+		}
+		if !e.Buttons.Contain(pointer.ButtonPrimary) {
+			continue
+		}
+
+		gtx.Execute(key.FocusCmd{Tag: selfTag})
+	}
 }
