@@ -27,51 +27,32 @@ func newEditingArea() *EditingArea {
 }
 
 func (ea *EditingArea) Update(gtx layout.Context) {
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Required: key.ModCtrl,
+			Name: "R",
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.board.Resize(ea.board.pixelImgOp.Size().Add(image.Pt(10, 10)), f32.Pt(0.5, 0.5))
+	}
+
+	ea.CheckUndoRedo(gtx)
+
 	dragAccumulation := f32.Point{X: 0, Y: 0}
 
-	for {
-		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
-			Required: key.ModCtrl,
-			Name: "Z",
-		})
-		if !ok {
-			break
-		}
-
-		e, ok := ev.(key.Event)
-		if !ok {
-			continue
-		}
-
-		if e.State == key.Release {
-			continue
-		}
-
-		ea.board.Undo()
-	}
-
-	for {
-		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
-			Required: key.ModCtrl,
-			Name: "Y",
-		})
-		if !ok {
-			break
-		}
-
-		e, ok := ev.(key.Event)
-		if !ok {
-			continue
-		}
-
-		if e.State == key.Release {
-			continue
-		}
-
-		ea.board.Redo()
-	}
 
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
@@ -112,6 +93,57 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 	ea.board.distanceMoved = ea.board.distanceMoved.Add(dragAccumulation)
 
 	ea.board.Update(ea.center)
+}
+
+func (ea *EditingArea) CheckUndoRedo(gtx layout.Context)  {
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Required: key.ModCtrl,
+			Optional: key.ModShift,
+			Name: "Z",
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if e.State == key.Release {
+			continue
+		}
+
+		if e.Modifiers.Contain(key.ModShift) {
+			ea.board.Redo()
+		} else {
+			ea.board.Undo()
+		}
+	}
+
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Required: key.ModCtrl,
+			Name: "Y",
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.board.Redo()
+	}
 }
 
 func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {

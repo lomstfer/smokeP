@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"math"
 	"smokep/boardactions"
+	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/op"
@@ -70,6 +71,57 @@ func (pb *PixelBoard) DrawSelf(ops *op.Ops) {
 	tStack.Pop()
 }
 
+func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePos f32.Point) {
+	size := pb.Size()
+	scaleChange := -scrollY * zoomMultiplier * pb.scale
+	pb.scale += scaleChange
+
+	mouseRelBoard := mousePos.Sub(pb.position)
+
+	ratioX := mouseRelBoard.X / size.X
+	ratioY := mouseRelBoard.Y / size.Y
+	pb.distanceMoved = pb.distanceMoved.Sub(f32.Pt(
+		ratioX*scaleChange*float32(pb.pixelImgOp.Size().X),
+		ratioY*scaleChange*float32(pb.pixelImgOp.Size().Y),
+	))
+
+	pb.position = pb.distanceMoved.Add(editingAreaCenter)
+}
+
+
+func (pb *PixelBoard) AddAction(action boardactions.Action) {
+	for i := len(pb.actionList) - 1; i > pb.latestActionIndex; i-- {
+		pb.actionList = append(pb.actionList[:i], pb.actionList[i+1:]...)
+	}
+
+	pb.actionList = append(pb.actionList, action)
+}
+
+func (pb *PixelBoard) Undo() {
+	if pb.latestActionIndex <= -1 {
+		return
+	}
+
+	pb.actionList[pb.latestActionIndex].Undo(pb.pixelImg)
+	pb.setToNewImage(pb.pixelImg)
+	pb.latestActionIndex -= 1
+}
+
+func (pb *PixelBoard) Redo() {
+	if len(pb.actionList) == 0 || pb.latestActionIndex == len(pb.actionList)-1 {
+		return
+	}
+
+	pb.latestActionIndex += 1
+	pb.actionList[pb.latestActionIndex].Do(pb.pixelImg)
+	pb.setToNewImage(pb.pixelImg)
+}
+
+func (pb *PixelBoard) Resize(newSize image.Point, resizeOrigin f32.Point) {
+	pb.AddAction(boardactions.NewResizeAction(newSize, resizeOrigin))
+	pb.Redo()
+}
+
 func (pb *PixelBoard) OnDraw(mousePos f32.Point) {
 	// size := pb.Size()
 	// onBoard := mousePos.X > pb.position.X &&
@@ -91,7 +143,7 @@ func (pb *PixelBoard) OnDraw(mousePos f32.Point) {
 	if pb.previousDrawPixelPoint != nil {
 		var points []image.Point
 		{
-			betweenPoints := getLineBetweenPoints(*pb.previousDrawPixelPoint, pixelPoint)
+			betweenPoints := utils.GetLineBetweenPoints(*pb.previousDrawPixelPoint, pixelPoint)
 			for _, p := range betweenPoints {
 				if pb.pixelImg.NRGBAAt(p.X, p.Y) != pb.drawingColor {
 					points = append(points, p)
@@ -119,77 +171,7 @@ func (pb *PixelBoard) OnStopDrawing() {
 	pb.previousDrawPixelPoint = nil
 	if pb.currentDrawAction != nil {
 		pb.AddAction(*pb.currentDrawAction)
+		pb.latestActionIndex += 1
 	}
 	pb.currentDrawAction = nil
-}
-
-func (pb *PixelBoard) AddAction(action boardactions.Action) {
-	for i := len(pb.actionList) - 1; i > pb.latestActionIndex; i-- {
-		pb.actionList = append(pb.actionList[:i], pb.actionList[i+1:]...)
-	}
-
-	pb.actionList = append(pb.actionList, action)
-	pb.latestActionIndex += 1
-}
-
-func (pb *PixelBoard) Undo() {
-	if pb.latestActionIndex <= -1 {
-		return
-	}
-
-	pb.actionList[pb.latestActionIndex].Undo(pb.pixelImg)
-	pb.refreshImage()
-	pb.latestActionIndex -= 1
-}
-
-func (pb *PixelBoard) Redo() {
-	if len(pb.actionList) == 0 || pb.latestActionIndex == len(pb.actionList)-1 {
-		return
-	}
-
-	pb.actionList[pb.latestActionIndex+1].Do(pb.pixelImg)
-	pb.refreshImage()
-	pb.latestActionIndex += 1
-}
-
-func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePos f32.Point) {
-	size := pb.Size()
-	scaleChange := -scrollY * zoomMultiplier * pb.scale
-	pb.scale += scaleChange
-
-	mouseRelBoard := mousePos.Sub(pb.position)
-
-	ratioX := mouseRelBoard.X / size.X
-	ratioY := mouseRelBoard.Y / size.Y
-	pb.distanceMoved = pb.distanceMoved.Sub(f32.Pt(
-		ratioX*scaleChange*float32(pb.pixelImgOp.Size().X),
-		ratioY*scaleChange*float32(pb.pixelImgOp.Size().Y),
-	))
-
-	pb.position = pb.distanceMoved.Add(editingAreaCenter)
-}
-
-func getLineBetweenPoints(p1 image.Point, p2 image.Point) []image.Point {
-	var points []image.Point
-
-	d := p2.Sub(p1)
-	if int(math.Abs(float64(d.X))) > int(math.Abs(float64(d.Y))) {
-		k := float32(d.Y) / float32(d.X)
-		for i := 1; i <= int(math.Abs(float64(d.X))); i++ {
-			x := i * int(float32(d.X)/float32(math.Abs(float64(d.X))))
-			y := int(math.Round(float64(float32(x) * k)))
-			pos := p1.Add(image.Pt(x, y))
-			points = append(points, pos)
-		}
-	} else {
-		k := float32(d.X) / float32(d.Y)
-		for i := 1; i <= int(math.Abs(float64(d.Y))); i++ {
-			y := i * int(float32(d.Y)/float32(math.Abs(float64(d.Y))))
-			x := int(math.Round(float64(float32(y) * k)))
-			pos := p1.Add(image.Pt(x, y))
-			points = append(points, pos)
-		}
-	}
-
-	return points
 }

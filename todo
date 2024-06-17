@@ -1,5 +1,4 @@
 features:
-    * change size of canvas
-    * ctrl-z, ctrl-shift-z/ctrl-y
+    * unfocus text editors
     * save colors
     * tools (bucket, pick color etc.)

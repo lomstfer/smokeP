@@ -42,7 +42,7 @@ func run(window *app.Window) error {
 	var ops op.Ops
 
 	editingArea := newEditingArea()
-	settingsArea := newSettingsArea()
+	settingsArea := newSettingsArea(editingArea.board.pixelImgOp.Size())
 	go func() {
 		for {
 			select {
@@ -66,6 +66,8 @@ func run(window *app.Window) error {
 					editingArea.board.setToNewImage(img)
 					window.Invalidate()
 				}
+			case newSize := <-settingsArea.PixelBoardSizeEditorSubmit:
+				editingArea.board.Resize(newSize, f32.Pt(0, 0))
 			}
 		}
 	}()
@@ -79,7 +81,7 @@ func run(window *app.Window) error {
 			return e.Err
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
-
+			
 			{
 				r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 				area := clip.Rect(r).Push(gtx.Ops)
@@ -94,8 +96,8 @@ func run(window *app.Window) error {
 				area.Pop()
 			}
 
-			settingsArea.Update(gtx)
 			editingArea.Update(gtx)
+			settingsArea.Update(gtx, editingArea.board.pixelImgOp.Size())
 
 			layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {

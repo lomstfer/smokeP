@@ -124,3 +124,28 @@ func SaveImageToFile(img *image.NRGBA, path string) error {
 
     return nil
 }
+
+func GetLineBetweenPoints(p1 image.Point, p2 image.Point) []image.Point {
+	var points []image.Point
+
+	d := p2.Sub(p1)
+	if int(math.Abs(float64(d.X))) > int(math.Abs(float64(d.Y))) {
+		k := float32(d.Y) / float32(d.X)
+		for i := 1; i <= int(math.Abs(float64(d.X))); i++ {
+			x := i * int(float32(d.X)/float32(math.Abs(float64(d.X))))
+			y := int(math.Round(float64(float32(x) * k)))
+			pos := p1.Add(image.Pt(x, y))
+			points = append(points, pos)
+		}
+	} else {
+		k := float32(d.X) / float32(d.Y)
+		for i := 1; i <= int(math.Abs(float64(d.Y))); i++ {
+			y := i * int(float32(d.Y)/float32(math.Abs(float64(d.Y))))
+			x := int(math.Round(float64(float32(y) * k)))
+			pos := p1.Add(image.Pt(x, y))
+			points = append(points, pos)
+		}
+	}
+
+	return points
+}

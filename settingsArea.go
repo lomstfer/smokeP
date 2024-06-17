@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"smokep/colorPicker"
 
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
@@ -12,14 +14,16 @@ import (
 )
 
 type SettingsArea struct {
-	colorPicker *colorPicker.ColorPicker
-	saveButton  *widget.Clickable
-	loadButton  *widget.Clickable
-	SaveButtonClicked chan bool
-	LoadButtonClicked chan bool
+	colorPicker                *colorPicker.ColorPicker
+	saveButton                 *widget.Clickable
+	SaveButtonClicked          chan bool
+	loadButton                 *widget.Clickable
+	LoadButtonClicked          chan bool
+	pixelBoardSizeEditor       widget.Editor
+	PixelBoardSizeEditorSubmit chan image.Point
 }
 
-func newSettingsArea() *SettingsArea {
+func newSettingsArea(pixelBoardSize image.Point) *SettingsArea {
 	sa := &SettingsArea{}
 
 	sa.colorPicker = colorPicker.NewColorPicker(image.Pt(1, 1))
@@ -27,12 +31,41 @@ func newSettingsArea() *SettingsArea {
 	sa.loadButton = &widget.Clickable{}
 	sa.SaveButtonClicked = make(chan bool)
 	sa.LoadButtonClicked = make(chan bool)
+	sa.pixelBoardSizeEditor = widget.Editor{Submit: true, ReadOnly: false}
+	sa.pixelBoardSizeEditor.SetText(fmt.Sprintf("%dx%d", pixelBoardSize.X, pixelBoardSize.Y))
+	sa.PixelBoardSizeEditorSubmit = make(chan image.Point)
 
 	return sa
 }
 
-func (sa *SettingsArea) Update(gtx layout.Context) {
+func (sa *SettingsArea) Update(gtx layout.Context, pixelBoardSize image.Point) {
 	sa.colorPicker.Update(gtx)
+
+	if !gtx.Focused(&sa.pixelBoardSizeEditor) {
+		sa.pixelBoardSizeEditor.SetText(fmt.Sprintf("%dx%d", pixelBoardSize.X, pixelBoardSize.Y))
+	}
+
+	for {
+		ev, ok := sa.pixelBoardSizeEditor.Update(gtx)
+		if !ok {
+			break
+		}
+		_, ok = ev.(widget.SubmitEvent)
+		if !ok {
+			continue
+		}
+		gtx.Execute(key.FocusCmd{Tag: nil})
+
+		{
+			input := sa.pixelBoardSizeEditor.Text()
+			var width, height int
+			_, err := fmt.Sscanf(input, "%dx%d", &width, &height)
+			if err == nil {
+				sa.PixelBoardSizeEditorSubmit <- image.Pt(width, height)
+			}
+		}
+
+	}
 }
 
 func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
@@ -59,6 +92,9 @@ func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout
 					}
 					return material.Button(theme, sa.loadButton, "Load").Layout(gtx)
 				}),
+				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+					return material.Editor(theme, &sa.pixelBoardSizeEditor, "").Layout(gtx)
+				}),
 			)
 
 			return layout.Dimensions{Size: gtx.Constraints.Max}
@@ -71,6 +107,6 @@ func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout
 			return d
 		}),
 	)
-	
+
 	return d
 }
