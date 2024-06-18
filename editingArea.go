@@ -9,9 +9,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
-	"gioui.org/op"
 	"gioui.org/op/clip"
-	"gioui.org/op/paint"
 )
 
 type EditingArea struct {
@@ -28,8 +26,6 @@ func newEditingArea() *EditingArea {
 }
 
 func (ea *EditingArea) Update(gtx layout.Context) {
-	utils.FocusSelfOnClick(ea, gtx)
-
 	for {
 		ev, ok := gtx.Event(key.Filter{
 			Focus:    nil,
@@ -77,19 +73,22 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 		case pointer.Drag:
 			if e.Buttons.Contain(pointer.ButtonSecondary) {
 				dragAccumulation = dragAccumulation.Add(e.Position.Sub(ea.mousePos))
+				ea.mousePos = e.Position
 			}
 			if e.Buttons.Contain(pointer.ButtonPrimary) {
 				ea.board.OnDraw(e.Position)
 			}
 		case pointer.Press:
 			if e.Buttons.Contain(pointer.ButtonPrimary) {
+				gtx.Execute(key.FocusCmd{Tag: ea})
 				ea.board.OnDraw(e.Position)
+			}
+			if e.Buttons.Contain(pointer.ButtonSecondary) {
+				ea.mousePos = e.Position
 			}
 		case pointer.Leave, pointer.Release:
 			ea.board.OnStopDrawing()
 		}
-
-		ea.mousePos = e.Position
 	}
 
 	ea.board.distanceMoved = ea.board.distanceMoved.Add(dragAccumulation)
@@ -148,7 +147,7 @@ func (ea *EditingArea) CheckUndoRedo(gtx layout.Context) {
 	}
 }
 
-func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
+func (ea *EditingArea) Layout(gtx layout.Context, gridBg *utils.GridBackground) layout.Dimensions {
 	{
 		area := clip.Rect(image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)).Push(gtx.Ops)
 		event.Op(gtx.Ops, ea)
@@ -161,42 +160,15 @@ func (ea *EditingArea) Layout(gtx layout.Context) layout.Dimensions {
 
 	ea.Update(gtx)
 
-	ea.drawBackground(gtx.Ops)
+	{
+		boardPos := ea.board.position.Round()
+		boardSize := ea.board.Size().Round()
+		r := image.Rect(boardPos.X, boardPos.Y, boardPos.X + boardSize.X, boardPos.Y + boardSize.Y)
+		gridBg.Draw(gtx.Ops, r)
+	}
 	ea.board.DrawSelf(gtx.Ops)
 
 	event.Op(gtx.Ops, ea)
 
 	return layout.Dimensions{Size: ea.size}
-}
-
-func (ea *EditingArea) drawBackground(ops *op.Ops) {
-	boardIntPosition := image.Pt(int(ea.board.position.X), int(ea.board.position.Y))
-	bsize := image.Pt(int(ea.board.Size().X), int(ea.board.Size().Y))
-	bgCol := g_theme.Bg
-
-	{
-		area := clip.Rect(image.Rect(0, 0, ea.size.X, boardIntPosition.Y)).Push(ops)
-		paint.ColorOp{Color: bgCol}.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		area.Pop()
-	}
-	{
-		area := clip.Rect(image.Rect(0, boardIntPosition.Y+bsize.Y, ea.size.X, ea.size.Y)).Push(ops)
-		paint.ColorOp{Color: bgCol}.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		area.Pop()
-	}
-
-	{
-		area := clip.Rect(image.Rect(0, boardIntPosition.Y, boardIntPosition.X, boardIntPosition.Y+bsize.Y)).Push(ops)
-		paint.ColorOp{Color: bgCol}.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		area.Pop()
-	}
-	{
-		area := clip.Rect(image.Rect(boardIntPosition.X+bsize.X, boardIntPosition.Y, ea.size.X, boardIntPosition.Y+bsize.Y)).Push(ops)
-		paint.ColorOp{Color: bgCol}.Add(ops)
-		paint.PaintOp{}.Add(ops)
-		area.Pop()
-	}
 }

@@ -62,13 +62,13 @@ func (cpa *ColorPickerAlpha) Update(gtx layout.Context) {
 	}
 }
 
-func (cpa *ColorPickerAlpha) Layout(opaqueChosenColor color.NRGBA, gtx layout.Context) layout.Dimensions {
+func (cpa *ColorPickerAlpha) Layout(gtx layout.Context, opaqueChosenColor color.NRGBA, gridBg *utils.GridBackground) layout.Dimensions {
 	cpa.triggerRenderImageUpdate = cpa.triggerRenderImageUpdate || cpa.size != gtx.Constraints.Max
 	cpa.size = gtx.Constraints.Max
 
 	defer clip.Rect(image.Rect(0, 0, cpa.size.X, cpa.size.Y)).Push(gtx.Ops).Pop()
 
-	cpa.Draw(opaqueChosenColor, gtx)
+	cpa.Draw(gtx, opaqueChosenColor, gridBg)
 
 	event.Op(gtx.Ops, cpa)
 
@@ -96,8 +96,9 @@ func (cpa *ColorPickerAlpha) getPickerPositionClamped() float32 {
 	return pickerPosition
 }
 
-func (cpa *ColorPickerAlpha) Draw(opaqueChosenColor color.NRGBA, gtx layout.Context) {
+func (cpa *ColorPickerAlpha) Draw(gtx layout.Context, opaqueChosenColor color.NRGBA, gridBg *utils.GridBackground) {
 	grect := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
+	gridBg.Draw(gtx.Ops, grect)
 
 	if cpa.triggerRenderImageUpdate {
 		cpa.triggerRenderImageUpdate = false

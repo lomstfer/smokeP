@@ -102,7 +102,7 @@ func (cp *ColorPicker) Update(gtx layout.Context) {
 	cp.updateColors(gtx)
 }
 
-func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
+func (cp *ColorPicker) Layout(gtx layout.Context, theme *material.Theme, gridBg *utils.GridBackground) layout.Dimensions {
 	cp.PickedNewColor = false
 
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
@@ -113,7 +113,7 @@ func (cp *ColorPicker) Layout(theme *material.Theme, gtx layout.Context) layout.
 			return cp.valSat.Layout(cp.hue.chosenColor, gtx)
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			return cp.alpha.Layout(cp.ChosenColor, gtx)
+			return cp.alpha.Layout(gtx, cp.ChosenColor, gridBg)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			{

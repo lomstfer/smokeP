@@ -72,8 +72,7 @@ func run(window *app.Window) error {
 		}
 	}()
 
-	background := paint.NewImageOp(utils.GenerateGridImage(160, 90, color.NRGBA{200, 200, 200, 255}, color.NRGBA{100, 100, 100, 255}))
-	background.Filter = paint.FilterNearest
+	gridBackground := utils.NewGridBackground()
 
 	for {
 		switch e := window.Event().(type) {
@@ -81,31 +80,26 @@ func run(window *app.Window) error {
 			return e.Err
 		case app.FrameEvent:
 			gtx := app.NewContext(&ops, e)
-			
-			{
-				r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
-				area := clip.Rect(r).Push(gtx.Ops)
 
-				background.Add(gtx.Ops)
-
-				scale := max(float32(r.Dx())/float32(background.Size().X), float32(r.Dy())/float32(background.Size().Y))
-				tStack := op.Affine(f32.Affine2D{}.Scale(f32.Pt(0, 0), f32.Pt(scale, scale))).Push(gtx.Ops)
-				paint.PaintOp{}.Add(gtx.Ops)
-				tStack.Pop()
-
-				area.Pop()
-			}
-
+			gridBackground.WindowSize = gtx.Constraints.Max
 			editingArea.Update(gtx)
 			settingsArea.Update(gtx, editingArea.board.pixelImgOp.Size())
 
+			{ // background color
+				r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
+				area := clip.Rect(r).Push(gtx.Ops)
+				paint.ColorOp{Color: g_theme.Bg}.Add(gtx.Ops)
+				paint.PaintOp{}.Add(gtx.Ops)
+				area.Pop()
+			}
+
 			layout.Flex{Axis: layout.Horizontal}.Layout(gtx,
 				layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-					return settingsArea.Layout(g_theme, gtx)
+					return settingsArea.Layout(gtx, g_theme, gridBackground)
 				}),
 				layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
 					editingArea.board.drawingColor = settingsArea.colorPicker.ChosenColor
-					return editingArea.Layout(gtx)
+					return editingArea.Layout(gtx, gridBackground)
 				}),
 			)
 

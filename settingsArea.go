@@ -41,7 +41,7 @@ func newSettingsArea(pixelBoardSize image.Point) *SettingsArea {
 }
 
 func (sa *SettingsArea) Update(gtx layout.Context, pixelBoardSize image.Point) {
-	utils.FocusSelfOnClick(sa, gtx)
+	utils.ConsumePressAndFocusSelf(sa, gtx)
 
 	sa.colorPicker.Update(gtx)
 
@@ -71,7 +71,7 @@ func (sa *SettingsArea) Update(gtx layout.Context, pixelBoardSize image.Point) {
 	}
 }
 
-func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout.Dimensions {
+func (sa *SettingsArea) Layout(gtx layout.Context, theme *material.Theme, gridBg *utils.GridBackground) layout.Dimensions {
 	{
 		area := clip.Rect(image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)).Push(gtx.Ops)
 		event.Op(gtx.Ops, sa)
@@ -101,6 +101,7 @@ func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					d := material.Editor(theme, &sa.pixelBoardSizeEditor, "").Layout(gtx)
 					height += d.Size.Y
+
 					return d
 				}),
 			)
@@ -109,6 +110,7 @@ func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
+			gridBg.Draw(gtx.Ops, r)
 			area := clip.Rect(r).Push(gtx.Ops)
 			paint.ColorOp{Color: sa.colorPicker.ChosenColor}.Add(gtx.Ops)
 			paint.PaintOp{}.Add(gtx.Ops)
@@ -119,7 +121,7 @@ func (sa *SettingsArea) Layout(theme *material.Theme, gtx layout.Context) layout
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
 			area := clip.Rect(r).Push(gtx.Ops)
 			area.Pop()
-			d := sa.colorPicker.Layout(g_theme, gtx)
+			d := sa.colorPicker.Layout(gtx, g_theme, gridBg)
 			return d
 		}),
 	)

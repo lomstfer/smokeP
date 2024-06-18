@@ -56,33 +56,33 @@ func Clamp(x float64, min float64, max float64) float64 {
 }
 
 func ClampInt(x int, min int, max int) int {
-    if x < min {
-        return min
-    }
-    if x > max {
-        return max
-    }
-    return x
+	if x < min {
+		return min
+	}
+	if x > max {
+		return max
+	}
+	return x
 }
 
 func GenerateGridImage(width, height int, color1 color.NRGBA, color2 color.NRGBA) *image.NRGBA {
 	img := image.NewNRGBA(image.Rect(0, 0, width, height))
 	doColor1 := false
 	for i := 0; i < len(img.Pix); i += 4 {
-		if (i / 4 % width == 0) {
+		if i/4%width == 0 {
 			doColor1 = !doColor1
 		}
 
 		if doColor1 {
 			img.Pix[i] = color1.R
-			img.Pix[i + 1] = color1.G
-			img.Pix[i + 2] = color1.B
-			img.Pix[i + 3] = color1.A
+			img.Pix[i+1] = color1.G
+			img.Pix[i+2] = color1.B
+			img.Pix[i+3] = color1.A
 		} else {
 			img.Pix[i] = color2.R
-			img.Pix[i + 1] = color2.G
-			img.Pix[i + 2] = color2.B
-			img.Pix[i + 3] = color2.A
+			img.Pix[i+1] = color2.G
+			img.Pix[i+2] = color2.B
+			img.Pix[i+3] = color2.A
 		}
 
 		doColor1 = !doColor1
@@ -105,28 +105,28 @@ func GenerateGridImage(width, height int, color1 color.NRGBA, color2 color.NRGBA
 // }
 
 func IsLight(c color.NRGBA) bool {
-    r := float64(c.R) / 255.0
-    g := float64(c.G) / 255.0
-    b := float64(c.B) / 255.0
+	r := float64(c.R) / 255.0
+	g := float64(c.G) / 255.0
+	b := float64(c.B) / 255.0
 
-    luminance := 0.299*r + 0.587*g + 0.114*b
+	luminance := 0.299*r + 0.587*g + 0.114*b
 
-    return luminance > 0.5
+	return luminance > 0.5
 }
 
 func SaveImageToFile(img *image.NRGBA, path string) error {
-    file, err := os.Create(path)
-    if err != nil {
-        return err
-    }
-    defer file.Close()
-
-    err = png.Encode(file, img)
+	file, err := os.Create(path)
 	if err != nil {
-        return err
-    }
+		return err
+	}
+	defer file.Close()
 
-    return nil
+	err = png.Encode(file, img)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetLineBetweenPoints(p1 image.Point, p2 image.Point) []image.Point {
@@ -154,11 +154,11 @@ func GetLineBetweenPoints(p1 image.Point, p2 image.Point) []image.Point {
 	return points
 }
 
-func FocusSelfOnClick(selfTag interface{}, gtx layout.Context) {
+func ConsumePressAndFocusSelf(selfTag interface{}, gtx layout.Context) {
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
-			Target:       selfTag,
-			Kinds:        pointer.Press,
+			Target: selfTag,
+			Kinds:  pointer.Press,
 		})
 		if !ok {
 			break
