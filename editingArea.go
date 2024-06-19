@@ -161,13 +161,13 @@ func (ea *EditingArea) Layout(gtx layout.Context, gridBg *utils.GridBackground) 
 	ea.Update(gtx)
 
 	{
-		boardPos := ea.board.position.Round()
-		boardSize := ea.board.Size().Round()
+		boardPos := image.Pt(int(ea.board.position.X), int(ea.board.position.Y))
+		boardSize := image.Pt(int(ea.board.Size().X), int(ea.board.Size().Y))
 		r := image.Rect(boardPos.X, boardPos.Y, boardPos.X + boardSize.X, boardPos.Y + boardSize.Y)
 		gridBg.Draw(gtx.Ops, r)
 	}
 	ea.board.DrawSelf(gtx.Ops)
-
+	
 	event.Op(gtx.Ops, ea)
 
 	return layout.Dimensions{Size: ea.size}

@@ -106,6 +106,15 @@ func (cp *ColorPicker) Layout(gtx layout.Context, theme *material.Theme, gridBg 
 	cp.PickedNewColor = false
 
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Flexed(5, func(gtx layout.Context) layout.Dimensions {
+			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
+			gridBg.Draw(gtx.Ops, r)
+			area := clip.Rect(r).Push(gtx.Ops)
+			paint.ColorOp{Color: cp.ChosenColor}.Add(gtx.Ops)
+			paint.PaintOp{}.Add(gtx.Ops)
+			area.Pop()
+			return layout.Dimensions{Size: gtx.Constraints.Max}
+		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
 			return cp.hue.Layout(gtx)
 		}),

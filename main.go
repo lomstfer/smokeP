@@ -9,7 +9,6 @@ import (
 	"smokep/utils"
 
 	"gioui.org/app"
-	"gioui.org/f32"
 	"gioui.org/layout"
 	"gioui.org/op"
 	"gioui.org/op/clip"
@@ -66,8 +65,8 @@ func run(window *app.Window) error {
 					editingArea.board.setToNewImage(img)
 					window.Invalidate()
 				}
-			case newSize := <-settingsArea.PixelBoardSizeEditorSubmit:
-				editingArea.board.Resize(newSize, f32.Pt(0, 0))
+			case newSize := <-settingsArea.PixelBoardSizeEditor.editorSubmit:
+				editingArea.board.Resize(newSize, settingsArea.PixelBoardSizeEditor.selectedOrigin)
 			}
 		}
 	}()
