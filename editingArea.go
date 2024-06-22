@@ -56,7 +56,7 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       ea,
 			Kinds:        pointer.Drag | pointer.Press | pointer.Scroll | pointer.Leave | pointer.Release,
-			ScrollBounds: image.Rect(-10, -10, 10, 10),
+			ScrollY:  pointer.ScrollRange{Min: -10, Max: 10},
 		})
 		if !ok {
 			break

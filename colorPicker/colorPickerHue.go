@@ -53,7 +53,6 @@ func (cph *ColorPickerHue) Update(gtx layout.Context) {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cph,
 			Kinds:        pointer.Press | pointer.Drag,
-			ScrollBounds: image.Rect(-10, -10, 10, 10),
 		})
 
 		if !ok {

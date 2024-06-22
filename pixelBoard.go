@@ -34,8 +34,9 @@ type PixelBoard struct {
 func newPixelBoard() *PixelBoard {
 	pb := &PixelBoard{}
 
-	pb.setToNewImage(image.NewNRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight)))
+	pb.pixelImg = image.NewNRGBA(image.Rect(0, 0, defaultBoardWidth, defaultBoardHeight))
 	pb.refreshImage()
+	pb.centerImage()
 
 	pb.latestActionIndex = -1
 
@@ -47,10 +48,8 @@ func (pb *PixelBoard) refreshImage() {
 	pb.pixelImgOp.Filter = paint.FilterNearest
 }
 
-func (pb *PixelBoard) setToNewImage(newImage *image.NRGBA) {
-	pb.pixelImg = newImage
-	pb.refreshImage()
-	pb.scale = 640.0 / float32(math.Sqrt(float64(newImage.Rect.Dx()*newImage.Rect.Dx())+float64(newImage.Rect.Dy()*newImage.Rect.Dy())))
+func (pb *PixelBoard) centerImage() {
+	pb.scale = 640.0 / float32(math.Sqrt(float64(pb.pixelImg.Rect.Dx()*pb.pixelImg.Rect.Dx())+float64(pb.pixelImg.Rect.Dy()*pb.pixelImg.Rect.Dy())))
 	pb.distanceMoved = pb.Size().Div(-2)
 }
 
@@ -88,7 +87,6 @@ func (pb *PixelBoard) Zoom(editingAreaCenter f32.Point, scrollY float32, mousePo
 	pb.position = pb.distanceMoved.Add(editingAreaCenter)
 }
 
-
 func (pb *PixelBoard) AddAction(action boardactions.Action) {
 	for i := len(pb.actionList) - 1; i > pb.latestActionIndex; i-- {
 		pb.actionList = append(pb.actionList[:i], pb.actionList[i+1:]...)
@@ -102,8 +100,13 @@ func (pb *PixelBoard) Undo() {
 		return
 	}
 
+	
+	
 	pb.actionList[pb.latestActionIndex].Undo(pb.pixelImg)
-	pb.setToNewImage(pb.pixelImg)
+	pb.refreshImage()
+	if _, ok := pb.actionList[pb.latestActionIndex].(*boardactions.ResizeAction); ok {
+		pb.centerImage()
+	}
 	pb.latestActionIndex -= 1
 }
 
@@ -114,7 +117,10 @@ func (pb *PixelBoard) Redo() {
 
 	pb.latestActionIndex += 1
 	pb.actionList[pb.latestActionIndex].Do(pb.pixelImg)
-	pb.setToNewImage(pb.pixelImg)
+	pb.refreshImage()
+	if _, ok := pb.actionList[pb.latestActionIndex].(*boardactions.ResizeAction); ok {
+		pb.centerImage()
+	}
 }
 
 func (pb *PixelBoard) Resize(newSize image.Point, resizeOrigin f32.Point) {
@@ -150,7 +156,7 @@ func (pb *PixelBoard) OnDraw(mousePos f32.Point) {
 				}
 			}
 		}
-		
+
 		for _, p := range points {
 			pb.currentDrawAction.PreviousPixelcolors[p] = pb.pixelImg.NRGBAAt(p.X, p.Y)
 			pb.pixelImg.SetNRGBA(p.X, p.Y, pb.drawingColor)

@@ -62,7 +62,9 @@ func run(window *app.Window) error {
 						fmt.Println("Error loading image")
 						break
 					}
-					editingArea.board.setToNewImage(img)
+					editingArea.board.pixelImg = img
+					editingArea.board.refreshImage()
+					editingArea.board.centerImage()
 					window.Invalidate()
 				}
 			case newSize := <-settingsArea.PixelBoardSizeEditor.editorSubmit:

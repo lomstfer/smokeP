@@ -43,7 +43,6 @@ func (cpvs *ColorPickerValueSat) Update(gtx layout.Context) {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target:       cpvs,
 			Kinds:        pointer.Drag | pointer.Press,
-			ScrollBounds: image.Rect(-10, -10, 10, 10),
 		})
 		if !ok {
 			break
