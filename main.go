@@ -62,6 +62,7 @@ func run(window *app.Window) error {
 						fmt.Println("Error loading image")
 						break
 					}
+					editingArea.board.ClearActions()
 					editingArea.board.pixelImg = img
 					editingArea.board.refreshImage()
 					editingArea.board.centerImage()

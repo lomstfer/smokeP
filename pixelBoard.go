@@ -14,8 +14,8 @@ import (
 
 const (
 	zoomMultiplier     = 0.01
-	defaultBoardWidth  = 32
-	defaultBoardHeight = 32
+	defaultBoardWidth  = 16
+	defaultBoardHeight = 16
 )
 
 type PixelBoard struct {
@@ -95,12 +95,15 @@ func (pb *PixelBoard) AddAction(action boardactions.Action) {
 	pb.actionList = append(pb.actionList, action)
 }
 
+func (pb *PixelBoard) ClearActions() {
+	pb.actionList = nil
+	pb.latestActionIndex = -1
+}
+
 func (pb *PixelBoard) Undo() {
 	if pb.latestActionIndex <= -1 {
 		return
 	}
-
-	
 	
 	pb.actionList[pb.latestActionIndex].Undo(pb.pixelImg)
 	pb.refreshImage()
@@ -139,6 +142,7 @@ func (pb *PixelBoard) OnDraw(mousePos f32.Point) {
 	pixelPoint := image.Pt(int(rel.X), int(rel.Y))
 
 	if pb.pixelImg.NRGBAAt(pixelPoint.X, pixelPoint.Y) == pb.drawingColor {
+		pb.previousDrawPixelPoint = &pixelPoint
 		return
 	}
 
