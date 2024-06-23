@@ -13,16 +13,19 @@ import (
 )
 
 type SettingsArea struct {
-	colorPicker                *colorPicker.ColorPicker
-	saveButton                 *widget.Clickable
-	SaveButtonClicked          chan bool
-	loadButton                 *widget.Clickable
-	LoadButtonClicked          chan bool
-	PixelBoardSizeEditor       *BoardSizeEditor
+	colorPicker          *colorPicker.ColorPicker
+	saveButton           *widget.Clickable
+	SaveButtonClicked    chan bool
+	loadButton           *widget.Clickable
+	LoadButtonClicked    chan bool
+	PixelBoardSizeEditor *BoardSizeEditor
+	ColorSaver           *ColorSaver
 }
 
 func newSettingsArea(pixelBoardSize image.Point) *SettingsArea {
 	sa := &SettingsArea{}
+
+	sa.ColorSaver = NewColorSaver()
 
 	sa.colorPicker = colorPicker.NewColorPicker(image.Pt(1, 1))
 	sa.saveButton = &widget.Clickable{}
@@ -36,6 +39,11 @@ func newSettingsArea(pixelBoardSize image.Point) *SettingsArea {
 
 func (sa *SettingsArea) Update(gtx layout.Context, pixelBoardSize image.Point) {
 	utils.ConsumePressAndFocusSelf(sa, gtx)
+
+	sa.ColorSaver.Update(gtx, sa.colorPicker.ChosenColor)
+	if sa.ColorSaver.justClickedColor != nil {
+		sa.colorPicker.SetChosenColor(*sa.ColorSaver.justClickedColor)
+	}
 
 	sa.colorPicker.Update(gtx)
 	sa.PixelBoardSizeEditor.Update(gtx, pixelBoardSize)
@@ -78,10 +86,11 @@ func (sa *SettingsArea) Layout(gtx layout.Context, theme *material.Theme, gridBg
 			return layout.Dimensions{Size: image.Pt(gtx.Constraints.Max.X, height)}
 		}),
 		layout.Flexed(1, func(gtx layout.Context) layout.Dimensions {
-			r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)
-			area := clip.Rect(r).Push(gtx.Ops)
-			area.Pop()
 			d := sa.colorPicker.Layout(gtx, g_theme, gridBg)
+			return d
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			d := sa.ColorSaver.Layout(gtx, g_theme, gridBg)
 			return d
 		}),
 	)

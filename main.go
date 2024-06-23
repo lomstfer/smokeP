@@ -68,8 +68,6 @@ func run(window *app.Window) error {
 					editingArea.board.centerImage()
 					window.Invalidate()
 				}
-			case newSize := <-settingsArea.PixelBoardSizeEditor.editorSubmit:
-				editingArea.board.Resize(newSize, settingsArea.PixelBoardSizeEditor.selectedOrigin)
 			}
 		}
 	}()
@@ -86,6 +84,9 @@ func run(window *app.Window) error {
 			gridBackground.WindowSize = gtx.Constraints.Max
 			editingArea.Update(gtx)
 			settingsArea.Update(gtx, editingArea.board.pixelImgOp.Size())
+			if settingsArea.PixelBoardSizeEditor.submitResult != nil {
+				editingArea.board.Resize(*settingsArea.PixelBoardSizeEditor.submitResult, settingsArea.PixelBoardSizeEditor.selectedOrigin)
+			}
 
 			{ // background color
 				r := image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)

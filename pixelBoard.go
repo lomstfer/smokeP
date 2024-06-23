@@ -104,7 +104,7 @@ func (pb *PixelBoard) Undo() {
 	if pb.latestActionIndex <= -1 {
 		return
 	}
-	
+
 	pb.actionList[pb.latestActionIndex].Undo(pb.pixelImg)
 	pb.refreshImage()
 	if _, ok := pb.actionList[pb.latestActionIndex].(*boardactions.ResizeAction); ok {

@@ -18,7 +18,7 @@ import (
 
 type BoardSizeEditor struct {
 	editor         *widget.Editor
-	editorSubmit   chan image.Point
+	submitResult   *image.Point
 	selectedOrigin f32.Point
 	squares        [3][3]*bool
 }
@@ -27,7 +27,6 @@ func NewBoardSizeEditor(pixelBoardSize image.Point) *BoardSizeEditor {
 	bse := &BoardSizeEditor{}
 	bse.editor = &widget.Editor{Submit: true}
 	bse.editor.SetText(fmt.Sprintf("%dx%d", pixelBoardSize.X, pixelBoardSize.Y))
-	bse.editorSubmit = make(chan image.Point)
 	bse.squares = [3][3]*bool{
 		{new(bool), new(bool), new(bool)},
 		{new(bool), new(bool), new(bool)},
@@ -46,29 +45,30 @@ func (bse *BoardSizeEditor) Update(gtx layout.Context, pixelBoardSize image.Poin
 		for x := 0; x < len(bse.squares[y]); x++ {
 			for {
 				ev, ok := gtx.Event(pointer.Filter{
-					Target:       bse.squares[y][x],
-					Kinds:        pointer.Press,
+					Target: bse.squares[y][x],
+					Kinds:  pointer.Press,
 				})
 				if !ok {
 					break
 				}
-		
+
 				e, ok := ev.(pointer.Event)
 				if !ok {
 					continue
 				}
-		
+
 				if !e.Buttons.Contain(pointer.ButtonPrimary) {
 					continue
 				}
-		
+
 				bse.selectedOrigin.X = float32(x) / 2
 				bse.selectedOrigin.Y = float32(y) / 2
 				gtx.Execute(key.FocusCmd{Tag: bse.squares[y][x]})
 			}
 		}
 	}
-	
+
+	bse.submitResult = nil
 	for {
 		ev, ok := bse.editor.Update(gtx)
 		if !ok {
@@ -85,7 +85,8 @@ func (bse *BoardSizeEditor) Update(gtx layout.Context, pixelBoardSize image.Poin
 			var width, height int
 			_, err := fmt.Sscanf(input, "%dx%d", &width, &height)
 			if err == nil {
-				bse.editorSubmit <- image.Pt(width, height)
+				pt := image.Pt(width, height)
+				bse.submitResult = &pt
 			}
 		}
 	}
@@ -105,14 +106,14 @@ func (bse *BoardSizeEditor) Layout(gtx layout.Context, theme *material.Theme) la
 					rect := image.Rect(x*iSize, y*iSize, x*iSize+iSize, y*iSize+iSize)
 					area := clip.Rect(rect).Push(gtx.Ops)
 					if float32(x)/2.0 == float32(bse.selectedOrigin.X) && float32(y)/2.0 == float32(bse.selectedOrigin.Y) {
-						paint.ColorOp{color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
+						paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
 						paint.PaintOp{}.Add(gtx.Ops)
 					}
 					s := clip.Stroke{
 						Path:  clip.RRect{Rect: rect}.Path(gtx.Ops),
 						Width: 3,
 					}.Op().Push(gtx.Ops)
-					paint.ColorOp{color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
+					paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
 					paint.PaintOp{}.Add(gtx.Ops)
 					s.Pop()
 					event.Op(gtx.Ops, bse.squares[y][x])

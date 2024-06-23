@@ -65,9 +65,7 @@ func (cp *ColorPicker) Update(gtx layout.Context) {
 			}
 		}
 
-		cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-		cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-		cp.setPickersToColor(cp.ChosenColor)
+		cp.SetChosenColor(cp.ChosenColor)
 	}
 
 	for {
@@ -91,9 +89,7 @@ func (cp *ColorPicker) Update(gtx layout.Context) {
 			}
 		}
 
-		cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-		cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
-		cp.setPickersToColor(cp.ChosenColor)
+		cp.SetChosenColor(cp.ChosenColor)
 	}
 
 	cp.hue.Update(gtx)
@@ -103,7 +99,6 @@ func (cp *ColorPicker) Update(gtx layout.Context) {
 }
 
 func (cp *ColorPicker) Layout(gtx layout.Context, theme *material.Theme, gridBg *utils.GridBackground) layout.Dimensions {
-	cp.PickedNewColor = false
 
 	d := layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Flexed(5, func(gtx layout.Context) layout.Dimensions {
@@ -145,7 +140,15 @@ func (cp *ColorPicker) Layout(gtx layout.Context, theme *material.Theme, gridBg 
 	return d
 }
 
+func (cp *ColorPicker) SetChosenColor(color color.NRGBA) {
+	cp.ChosenColor = color
+	cp.rgbaEditor.SetText(fmt.Sprintf("rgba(%v, %v, %v, %v)", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+	cp.hexEditor.SetText(fmt.Sprintf("#%02x%02x%02x%02x", cp.ChosenColor.R, cp.ChosenColor.G, cp.ChosenColor.B, cp.ChosenColor.A))
+	cp.setPickersToColor(cp.ChosenColor)
+}
+
 func (cp *ColorPicker) updateColors(gtx layout.Context) {
+	cp.PickedNewColor = false
 	cp.PickedNewColor = cp.hue.pickedNewColor || cp.valSat.pickedNewColor || cp.alpha.pickedNewColor
 	if !cp.PickedNewColor {
 		return
