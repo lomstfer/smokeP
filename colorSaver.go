@@ -6,6 +6,7 @@ import (
 	"smokep/utils"
 
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
@@ -33,6 +34,7 @@ func NewColorSaver() *ColorSaver {
 func (cs *ColorSaver) Update(gtx layout.Context, currentColor color.NRGBA) {
 	if cs.saveColorButton.Clicked(gtx) {
 		cs.colors = append(cs.colors, &currentColor)
+		gtx.Execute(key.FocusCmd{Tag: nil})
 	}
 
 	cs.justClickedColor = nil
@@ -71,7 +73,7 @@ func (cs *ColorSaver) Layout(gtx layout.Context, theme *material.Theme, gridBg *
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			r := image.Rect(0, 0, gtx.Constraints.Max.X, 70)
 			area52 := clip.Rect(r).Push(gtx.Ops)
-			posx := 0
+			posx := 10
 			for i := len(cs.colors) - 1; i >= 0; i-- {
 				c := cs.colors[i]
 				rect := image.Rect(posx, 10, posx+50, 60)

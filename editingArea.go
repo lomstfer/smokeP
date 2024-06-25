@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"smokep/pixeltools"
 	"smokep/utils"
 
 	"gioui.org/f32"
@@ -17,11 +18,14 @@ type EditingArea struct {
 	board    *PixelBoard
 	size     image.Point
 	center   f32.Point
+
+	pen pixeltools.Pencil
 }
 
 func newEditingArea() *EditingArea {
 	ea := &EditingArea{}
 	ea.board = newPixelBoard()
+	ea.pen = pixeltools.Pencil{}
 	return ea
 }
 
@@ -54,9 +58,9 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
-			Target:       ea,
-			Kinds:        pointer.Drag | pointer.Press | pointer.Scroll | pointer.Leave | pointer.Release,
-			ScrollY:  pointer.ScrollRange{Min: -10, Max: 10},
+			Target:  ea,
+			Kinds:   pointer.Drag | pointer.Press | pointer.Scroll | pointer.Leave | pointer.Release,
+			ScrollY: pointer.ScrollRange{Min: -10, Max: 10},
 		})
 		if !ok {
 			break
@@ -76,18 +80,25 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 				ea.mousePos = e.Position
 			}
 			if e.Buttons.Contain(pointer.ButtonPrimary) {
-				ea.board.OnDraw(e.Position)
+				point := ea.board.GetPixelPoint(e.Position)
+				ea.pen.OnDraw(ea.board.pixelImg, point, ea.board.drawingColor)
+				ea.board.refreshImage()
 			}
 		case pointer.Press:
 			if e.Buttons.Contain(pointer.ButtonPrimary) {
 				gtx.Execute(key.FocusCmd{Tag: ea})
-				ea.board.OnDraw(e.Position)
+				point := ea.board.GetPixelPoint(e.Position)
+				ea.pen.OnDraw(ea.board.pixelImg, point, ea.board.drawingColor)
+				ea.board.refreshImage()
 			}
 			if e.Buttons.Contain(pointer.ButtonSecondary) {
 				ea.mousePos = e.Position
 			}
 		case pointer.Leave, pointer.Release:
-			ea.board.OnStopDrawing()
+			if action := ea.pen.OnEnd(); action != nil {
+				ea.board.AddAction(action)
+				ea.board.latestActionIndex += 1
+			}
 		}
 	}
 
@@ -163,11 +174,11 @@ func (ea *EditingArea) Layout(gtx layout.Context, gridBg *utils.GridBackground) 
 	{
 		boardPos := image.Pt(int(ea.board.position.X), int(ea.board.position.Y))
 		boardSize := image.Pt(int(ea.board.Size().X), int(ea.board.Size().Y))
-		r := image.Rect(boardPos.X, boardPos.Y, boardPos.X + boardSize.X, boardPos.Y + boardSize.Y)
+		r := image.Rect(boardPos.X, boardPos.Y, boardPos.X+boardSize.X, boardPos.Y+boardSize.Y)
 		gridBg.Draw(gtx.Ops, r)
 	}
 	ea.board.DrawSelf(gtx.Ops)
-	
+
 	event.Op(gtx.Ops, ea)
 
 	return layout.Dimensions{Size: ea.size}

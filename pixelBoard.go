@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"math"
 	"smokep/boardactions"
-	"smokep/utils"
 
 	"gioui.org/f32"
 	"gioui.org/op"
@@ -19,16 +18,14 @@ const (
 )
 
 type PixelBoard struct {
-	pixelImg               *image.NRGBA
-	pixelImgOp             paint.ImageOp
-	distanceMoved          f32.Point
-	position               f32.Point
-	scale                  float32
-	drawingColor           color.NRGBA
-	previousDrawPixelPoint *image.Point
-	actionList             []boardactions.Action
-	latestActionIndex      int
-	currentDrawAction      *boardactions.DrawAction
+	pixelImg          *image.NRGBA
+	pixelImgOp        paint.ImageOp
+	distanceMoved     f32.Point
+	position          f32.Point
+	scale             float32
+	drawingColor      color.NRGBA
+	actionList        []boardactions.Action
+	latestActionIndex int
 }
 
 func newPixelBoard() *PixelBoard {
@@ -131,57 +128,8 @@ func (pb *PixelBoard) Resize(newSize image.Point, resizeOrigin f32.Point) {
 	pb.Redo()
 }
 
-func (pb *PixelBoard) OnDraw(mousePos f32.Point) {
-	// size := pb.Size()
-	// onBoard := mousePos.X > pb.position.X &&
-	// 	mousePos.X < pb.position.X+size.X &&
-	// 	mousePos.Y > pb.position.Y &&
-	// 	mousePos.Y < pb.position.Y+size.Y
-
+func (pb *PixelBoard) GetPixelPoint(mousePos f32.Point) image.Point {
 	rel := mousePos.Sub(pb.position).Div(pb.scale)
 	pixelPoint := image.Pt(int(rel.X), int(rel.Y))
-
-	if pb.pixelImg.NRGBAAt(pixelPoint.X, pixelPoint.Y) == pb.drawingColor {
-		pb.previousDrawPixelPoint = &pixelPoint
-		return
-	}
-
-	if pb.currentDrawAction == nil {
-		pb.currentDrawAction = boardactions.NewDrawAction(nil, pb.drawingColor)
-	}
-
-	if pb.previousDrawPixelPoint != nil {
-		var points []image.Point
-		{
-			betweenPoints := utils.GetLineBetweenPoints(*pb.previousDrawPixelPoint, pixelPoint)
-			for _, p := range betweenPoints {
-				if pb.pixelImg.NRGBAAt(p.X, p.Y) != pb.drawingColor {
-					points = append(points, p)
-				}
-			}
-		}
-
-		for _, p := range points {
-			pb.currentDrawAction.PreviousPixelcolors[p] = pb.pixelImg.NRGBAAt(p.X, p.Y)
-			pb.pixelImg.SetNRGBA(p.X, p.Y, pb.drawingColor)
-		}
-		pb.currentDrawAction.PixelPoints = append(pb.currentDrawAction.PixelPoints, points...)
-	} else {
-		pb.currentDrawAction.PreviousPixelcolors[pixelPoint] = pb.pixelImg.NRGBAAt(pixelPoint.X, pixelPoint.Y)
-		pb.pixelImg.SetNRGBA(pixelPoint.X, pixelPoint.Y, pb.drawingColor)
-		pb.currentDrawAction.PixelPoints = append(pb.currentDrawAction.PixelPoints, pixelPoint)
-	}
-
-	pb.refreshImage()
-
-	pb.previousDrawPixelPoint = &pixelPoint
-}
-
-func (pb *PixelBoard) OnStopDrawing() {
-	pb.previousDrawPixelPoint = nil
-	if pb.currentDrawAction != nil {
-		pb.AddAction(*pb.currentDrawAction)
-		pb.latestActionIndex += 1
-	}
-	pb.currentDrawAction = nil
+	return pixelPoint
 }

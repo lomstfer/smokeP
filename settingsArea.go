@@ -6,6 +6,7 @@ import (
 	"smokep/utils"
 
 	"gioui.org/io/event"
+	"gioui.org/io/key"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
 	"gioui.org/widget"
@@ -62,6 +63,7 @@ func (sa *SettingsArea) Layout(gtx layout.Context, theme *material.Theme, gridBg
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if sa.saveButton.Clicked(gtx) {
 						sa.SaveButtonClicked <- true
+						gtx.Execute(key.FocusCmd{Tag: nil})
 					}
 					d := material.Button(theme, sa.saveButton, "Save").Layout(gtx)
 					height += d.Size.Y
@@ -70,6 +72,7 @@ func (sa *SettingsArea) Layout(gtx layout.Context, theme *material.Theme, gridBg
 				layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 					if sa.loadButton.Clicked(gtx) {
 						sa.LoadButtonClicked <- true
+						gtx.Execute(key.FocusCmd{Tag: nil})
 					}
 					d := material.Button(theme, sa.loadButton, "Load").Layout(gtx)
 					height += d.Size.Y

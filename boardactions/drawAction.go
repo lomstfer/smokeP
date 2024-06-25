@@ -6,33 +6,39 @@ import (
 )
 
 type DrawAction struct {
-	PixelPoints         []image.Point
-	color               color.NRGBA
-	PreviousPixelcolors map[image.Point]color.NRGBA
+	Pixels         map[image.Point]color.NRGBA
+	PreviousPixels map[image.Point]color.NRGBA
 }
 
-func NewDrawAction(pixelPoints []image.Point, col color.NRGBA) *DrawAction {
-	da := &DrawAction{PixelPoints: pixelPoints, color: col}
-	da.PreviousPixelcolors = make(map[image.Point]color.NRGBA)
+func NewDrawAction(pixelPoints map[image.Point]color.NRGBA) *DrawAction {
+	da := &DrawAction{}
+
+	if pixelPoints == nil {
+		da.Pixels = make(map[image.Point]color.NRGBA)
+	} else {
+		da.Pixels = pixelPoints
+	}
+
+	da.PreviousPixels = make(map[image.Point]color.NRGBA)
 	return da
 }
 
 func (da DrawAction) Do(img *image.NRGBA) {
-	for p := range da.PreviousPixelcolors {
-		delete(da.PreviousPixelcolors, p)
+	for p := range da.PreviousPixels {
+		delete(da.PreviousPixels, p)
 	}
-	
-	for _, p := range da.PixelPoints {
-		da.PreviousPixelcolors[p] = img.NRGBAAt(p.X, p.Y)
-		img.SetNRGBA(p.X, p.Y, da.color)
+
+	for p, c := range da.Pixels {
+		da.PreviousPixels[p] = img.NRGBAAt(p.X, p.Y)
+		img.SetNRGBA(p.X, p.Y, c)
 	}
 }
 
 func (da DrawAction) Undo(img *image.NRGBA) {
-	for p, c := range da.PreviousPixelcolors {
+	for p, c := range da.PreviousPixels {
 		img.SetNRGBA(p.X, p.Y, c)
 	}
-	for p := range da.PreviousPixelcolors {
-		delete(da.PreviousPixelcolors, p)
+	for p := range da.PreviousPixels {
+		delete(da.PreviousPixels, p)
 	}
 }
