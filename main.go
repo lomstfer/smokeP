@@ -83,6 +83,9 @@ func run(window *app.Window) error {
 
 			gridBackground.WindowSize = gtx.Constraints.Max
 			editingArea.Update(gtx)
+			if editingArea.pickedColor != nil {
+				settingsArea.colorPicker.SetChosenColor(*editingArea.pickedColor)
+			}
 			settingsArea.Update(gtx, editingArea.board.pixelImgOp.Size())
 			if settingsArea.PixelBoardSizeEditor.submitResult != nil {
 				editingArea.board.Resize(*settingsArea.PixelBoardSizeEditor.submitResult, settingsArea.PixelBoardSizeEditor.selectedOrigin)
@@ -102,7 +105,8 @@ func run(window *app.Window) error {
 				}),
 				layout.Flexed(3, func(gtx layout.Context) layout.Dimensions {
 					editingArea.board.drawingColor = settingsArea.colorPicker.ChosenColor
-					return editingArea.Layout(gtx, gridBackground)
+					e := editingArea.Layout(gtx, gridBackground)
+					return e
 				}),
 			)
 

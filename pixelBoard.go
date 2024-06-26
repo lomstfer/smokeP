@@ -133,3 +133,11 @@ func (pb *PixelBoard) GetPixelPoint(mousePos f32.Point) image.Point {
 	pixelPoint := image.Pt(int(rel.X), int(rel.Y))
 	return pixelPoint
 }
+
+func (pb *PixelBoard) IsPointOnBoard(mousePosRelParent f32.Point) bool {
+	size := pb.Size()
+	return mousePosRelParent.X > pb.position.X &&
+		mousePosRelParent.X < pb.position.X+size.X &&
+		mousePosRelParent.Y > pb.position.Y &&
+		mousePosRelParent.Y < pb.position.Y+size.Y
+}

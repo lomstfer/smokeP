@@ -2,6 +2,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	"smokep/pixeltools"
 	"smokep/utils"
 
@@ -11,6 +12,7 @@ import (
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
 	"gioui.org/op/clip"
+	"gioui.org/op/paint"
 )
 
 type EditingArea struct {
@@ -19,13 +21,20 @@ type EditingArea struct {
 	size     image.Point
 	center   f32.Point
 
-	pen pixeltools.Pencil
+	currentTool pixeltools.Tool
+	pen         *pixeltools.Pencil
+	picker      *bool
+	pickedColor *color.NRGBA
+
+	justChoseTool bool
 }
 
 func newEditingArea() *EditingArea {
 	ea := &EditingArea{}
 	ea.board = newPixelBoard()
-	ea.pen = pixeltools.Pencil{}
+	ea.pen = &pixeltools.Pencil{}
+	ea.picker = new(bool)
+	ea.currentTool = pixeltools.ToolPen
 	return ea
 }
 
@@ -53,8 +62,10 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 	}
 
 	ea.CheckUndoRedo(gtx)
+	ea.UpdateTools(gtx)
 
 	dragAccumulation := f32.Point{X: 0, Y: 0}
+	ea.pickedColor = nil
 
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
@@ -81,23 +92,39 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 			}
 			if e.Buttons.Contain(pointer.ButtonPrimary) {
 				point := ea.board.GetPixelPoint(e.Position)
-				ea.pen.OnDraw(ea.board.pixelImg, point, ea.board.drawingColor)
-				ea.board.refreshImage()
+
+				switch ea.currentTool {
+				case pixeltools.ToolPen:
+					ea.pen.OnDraw(ea.board.pixelImg, point, ea.board.drawingColor)
+					ea.board.refreshImage()
+				}
 			}
 		case pointer.Press:
-			if e.Buttons.Contain(pointer.ButtonPrimary) {
+			if e.Buttons.Contain(pointer.ButtonPrimary) && !ea.justChoseTool {
 				gtx.Execute(key.FocusCmd{Tag: ea})
 				point := ea.board.GetPixelPoint(e.Position)
-				ea.pen.OnDraw(ea.board.pixelImg, point, ea.board.drawingColor)
-				ea.board.refreshImage()
+
+				switch ea.currentTool {
+				case pixeltools.ToolPen:
+					ea.pen.OnDraw(ea.board.pixelImg, point, ea.board.drawingColor)
+					ea.board.refreshImage()
+				case pixeltools.ToolPick:
+					if ea.board.IsPointOnBoard(e.Position) {
+						color := ea.board.pixelImg.NRGBAAt(point.X, point.Y)
+						ea.pickedColor = &color
+					}
+				}
 			}
 			if e.Buttons.Contain(pointer.ButtonSecondary) {
 				ea.mousePos = e.Position
 			}
 		case pointer.Leave, pointer.Release:
-			if action := ea.pen.OnEnd(); action != nil {
-				ea.board.AddAction(action)
-				ea.board.latestActionIndex += 1
+			switch ea.currentTool {
+			case pixeltools.ToolPen:
+				if action := ea.pen.OnEnd(); action != nil {
+					ea.board.AddAction(action)
+					ea.board.latestActionIndex += 1
+				}
 			}
 		}
 	}
@@ -158,13 +185,51 @@ func (ea *EditingArea) CheckUndoRedo(gtx layout.Context) {
 	}
 }
 
-func (ea *EditingArea) Layout(gtx layout.Context, gridBg *utils.GridBackground) layout.Dimensions {
-	{
-		area := clip.Rect(image.Rect(0, 0, gtx.Constraints.Max.X, gtx.Constraints.Max.Y)).Push(gtx.Ops)
-		event.Op(gtx.Ops, ea)
-		area.Pop()
-	}
+func (ea *EditingArea) UpdateTools(gtx layout.Context) {
+	ea.justChoseTool = false
+	for {
+		ev, ok := gtx.Event(pointer.Filter{
+			Target: ea.pen,
+			Kinds:  pointer.Press,
+		})
+		if !ok {
+			break
+		}
 
+		e, ok := ev.(pointer.Event)
+		if !ok {
+			continue
+		}
+
+		if !e.Buttons.Contain(pointer.ButtonPrimary) {
+			continue
+		}
+		ea.currentTool = pixeltools.ToolPen
+		ea.justChoseTool = true
+	}
+	for {
+		ev, ok := gtx.Event(pointer.Filter{
+			Target: ea.picker,
+			Kinds:  pointer.Press,
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(pointer.Event)
+		if !ok {
+			continue
+		}
+
+		if !e.Buttons.Contain(pointer.ButtonPrimary) {
+			continue
+		}
+		ea.currentTool = pixeltools.ToolPick
+		ea.justChoseTool = true
+	}
+}
+
+func (ea *EditingArea) Layout(gtx layout.Context, gridBg *utils.GridBackground) layout.Dimensions {
 	ea.size = gtx.Constraints.Max
 	ea.center = f32.Pt(float32(ea.size.X), float32(ea.size.Y)).Div(2)
 	defer clip.Rect(image.Rect(0, 0, ea.size.X, ea.size.Y)).Push(gtx.Ops).Pop()
@@ -181,5 +246,52 @@ func (ea *EditingArea) Layout(gtx layout.Context, gridBg *utils.GridBackground) 
 
 	event.Op(gtx.Ops, ea)
 
+	ea.LayoutTools(gtx)
+
 	return layout.Dimensions{Size: ea.size}
+}
+
+func (ea *EditingArea) LayoutTools(gtx layout.Context) {
+	size := 50
+	space := 10
+	increment := space
+
+	// pen
+	{
+		r := image.Rect(space, increment, space+size, increment+size)
+		a := clip.Rect(r).Push(gtx.Ops)
+		DrawToolRect(gtx, r, ea.currentTool == pixeltools.ToolPen)
+		event.Op(gtx.Ops, ea.pen)
+		a.Pop()
+	}
+	increment += space + size
+
+	// picker
+	{
+		r := image.Rect(space, increment, space+size, increment+size)
+		a := clip.Rect(r).Push(gtx.Ops)
+		DrawToolRect(gtx, r, ea.currentTool == pixeltools.ToolPick)
+		event.Op(gtx.Ops, ea.picker)
+		a.Pop()
+	}
+	increment += space + size
+}
+
+func DrawToolRect(gtx layout.Context, rect image.Rectangle, selected bool) {
+	paint.ColorOp{Color: color.NRGBA{150, 150, 150, 255}}.Add(gtx.Ops)
+	var s clip.Stack
+	if selected {
+		paint.PaintOp{}.Add(gtx.Ops)
+		s = clip.Stroke{
+			Path:  clip.RRect{Rect: rect}.Path(gtx.Ops),
+			Width: 6,
+		}.Op().Push(gtx.Ops)
+
+		paint.ColorOp{Color: color.NRGBA{255, 255, 255, 255}}.Add(gtx.Ops)
+		paint.PaintOp{}.Add(gtx.Ops)
+
+		s.Pop()
+	} else {
+		paint.PaintOp{}.Add(gtx.Ops)
+	}
 }
