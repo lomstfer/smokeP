@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"image"
 	"image/color"
@@ -16,6 +17,24 @@ import (
 	"gioui.org/widget/material"
 	"github.com/sqweek/dialog"
 )
+
+//go:embed assets/icons/*.png
+var g_iconFS embed.FS
+
+func loadIcon(name string) *image.Image {
+	iconFile, err := g_iconFS.Open("assets/icons/" + name)
+	if err != nil {
+		panic(err)
+	}
+	defer iconFile.Close()
+
+	img, _, err := image.Decode(iconFile)
+	if err != nil {
+		panic(err)
+	}
+
+	return &img
+}
 
 var g_theme *material.Theme
 

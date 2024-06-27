@@ -11,6 +11,7 @@ import (
 	"gioui.org/io/key"
 	"gioui.org/io/pointer"
 	"gioui.org/layout"
+	"gioui.org/op"
 	"gioui.org/op/clip"
 	"gioui.org/op/paint"
 )
@@ -21,12 +22,19 @@ type EditingArea struct {
 	size     image.Point
 	center   f32.Point
 
-	currentTool pixeltools.Tool
-	pen         *pixeltools.Pencil
-	picker      *bool
-	pickedColor *color.NRGBA
+	currentTool       pixeltools.Tool
+	pen               *pixeltools.Pencil
+	picker            *bool
+	pickedColor       *color.NRGBA
+	bucketConstrained *bool
+	bucketAll         *bool
 
 	justChoseTool bool
+
+	penIcon       paint.ImageOp
+	pickerIcon    paint.ImageOp
+	bucketIcon    paint.ImageOp
+	bucketAllIcon paint.ImageOp
 }
 
 func newEditingArea() *EditingArea {
@@ -34,7 +42,15 @@ func newEditingArea() *EditingArea {
 	ea.board = newPixelBoard()
 	ea.pen = &pixeltools.Pencil{}
 	ea.picker = new(bool)
+	ea.bucketConstrained = new(bool)
+	ea.bucketAll = new(bool)
 	ea.currentTool = pixeltools.ToolPen
+
+	ea.penIcon = paint.NewImageOp(*loadIcon("pen.png"))
+	ea.pickerIcon = paint.NewImageOp(*loadIcon("picker.png"))
+	ea.bucketIcon = paint.NewImageOp(*loadIcon("bucket.png"))
+	ea.bucketAllIcon = paint.NewImageOp(*loadIcon("bucket_all.png"))
+
 	return ea
 }
 
@@ -113,6 +129,24 @@ func (ea *EditingArea) Update(gtx layout.Context) {
 						color := ea.board.pixelImg.NRGBAAt(point.X, point.Y)
 						ea.pickedColor = &color
 					}
+				case pixeltools.ToolBucketConstrained:
+					if ea.board.IsPointOnBoard(e.Position) {
+						action := pixeltools.BucketConstrainedOnClick(ea.board.pixelImg, point, ea.board.drawingColor)
+						if action != nil {
+							ea.board.AddAction(action)
+							ea.board.Redo()
+							ea.board.refreshImage()
+						}
+					}
+				case pixeltools.ToolBucketAll:
+					if ea.board.IsPointOnBoard(e.Position) {
+						action := pixeltools.BucketAllOnClick(ea.board.pixelImg, point, ea.board.drawingColor)
+						if action != nil {
+							ea.board.AddAction(action)
+							ea.board.Redo()
+							ea.board.refreshImage()
+						}
+					}
 				}
 			}
 			if e.Buttons.Contain(pointer.ButtonSecondary) {
@@ -186,6 +220,79 @@ func (ea *EditingArea) CheckUndoRedo(gtx layout.Context) {
 }
 
 func (ea *EditingArea) UpdateTools(gtx layout.Context) {
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Name:  "1",
+		})
+		if !ok {
+			break
+		}
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.currentTool = pixeltools.ToolPen
+	}
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Name:  "2",
+		})
+		if !ok {
+			break
+		}
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.currentTool = pixeltools.ToolPick
+	}
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Name:  "3",
+		})
+		if !ok {
+			break
+		}
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.currentTool = pixeltools.ToolBucketConstrained
+	}
+	for {
+		ev, ok := gtx.Event(key.Filter{
+			Focus: nil,
+			Name:  "4",
+		})
+		if !ok {
+			break
+		}
+		e, ok := ev.(key.Event)
+		if !ok {
+			continue
+		}
+		if e.State == key.Release {
+			continue
+		}
+
+		ea.currentTool = pixeltools.ToolBucketAll
+	}
+
 	ea.justChoseTool = false
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
@@ -207,6 +314,7 @@ func (ea *EditingArea) UpdateTools(gtx layout.Context) {
 		ea.currentTool = pixeltools.ToolPen
 		ea.justChoseTool = true
 	}
+
 	for {
 		ev, ok := gtx.Event(pointer.Filter{
 			Target: ea.picker,
@@ -225,6 +333,48 @@ func (ea *EditingArea) UpdateTools(gtx layout.Context) {
 			continue
 		}
 		ea.currentTool = pixeltools.ToolPick
+		ea.justChoseTool = true
+	}
+
+	for {
+		ev, ok := gtx.Event(pointer.Filter{
+			Target: ea.bucketConstrained,
+			Kinds:  pointer.Press,
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(pointer.Event)
+		if !ok {
+			continue
+		}
+
+		if !e.Buttons.Contain(pointer.ButtonPrimary) {
+			continue
+		}
+		ea.currentTool = pixeltools.ToolBucketConstrained
+		ea.justChoseTool = true
+	}
+
+	for {
+		ev, ok := gtx.Event(pointer.Filter{
+			Target: ea.bucketAll,
+			Kinds:  pointer.Press,
+		})
+		if !ok {
+			break
+		}
+
+		e, ok := ev.(pointer.Event)
+		if !ok {
+			continue
+		}
+
+		if !e.Buttons.Contain(pointer.ButtonPrimary) {
+			continue
+		}
+		ea.currentTool = pixeltools.ToolBucketAll
 		ea.justChoseTool = true
 	}
 }
@@ -261,6 +411,7 @@ func (ea *EditingArea) LayoutTools(gtx layout.Context) {
 		r := image.Rect(space, increment, space+size, increment+size)
 		a := clip.Rect(r).Push(gtx.Ops)
 		DrawToolRect(gtx, r, ea.currentTool == pixeltools.ToolPen)
+		DrawToolIcon(gtx, r, ea.penIcon)
 		event.Op(gtx.Ops, ea.pen)
 		a.Pop()
 	}
@@ -271,7 +422,31 @@ func (ea *EditingArea) LayoutTools(gtx layout.Context) {
 		r := image.Rect(space, increment, space+size, increment+size)
 		a := clip.Rect(r).Push(gtx.Ops)
 		DrawToolRect(gtx, r, ea.currentTool == pixeltools.ToolPick)
+		DrawToolIcon(gtx, r, ea.pickerIcon)
 		event.Op(gtx.Ops, ea.picker)
+		a.Pop()
+	}
+	increment += space + size
+
+	// bucket constrained
+	{
+
+		r := image.Rect(space, increment, space+size, increment+size)
+		a := clip.Rect(r).Push(gtx.Ops)
+		DrawToolRect(gtx, r, ea.currentTool == pixeltools.ToolBucketConstrained)
+		DrawToolIcon(gtx, r, ea.bucketIcon)
+		event.Op(gtx.Ops, ea.bucketConstrained)
+		a.Pop()
+	}
+	increment += space + size
+
+	// bucket all
+	{
+		r := image.Rect(space, increment, space+size, increment+size)
+		a := clip.Rect(r).Push(gtx.Ops)
+		DrawToolRect(gtx, r, ea.currentTool == pixeltools.ToolBucketAll)
+		DrawToolIcon(gtx, r, ea.bucketAllIcon)
+		event.Op(gtx.Ops, ea.bucketAll)
 		a.Pop()
 	}
 	increment += space + size
@@ -294,4 +469,14 @@ func DrawToolRect(gtx layout.Context, rect image.Rectangle, selected bool) {
 	} else {
 		paint.PaintOp{}.Add(gtx.Ops)
 	}
+}
+
+func DrawToolIcon(gtx layout.Context, rect image.Rectangle, img paint.ImageOp) {
+	fac := float32(0.5)
+	scale := float32(rect.Dx()) / float32(img.Size().X) * fac
+	pos := f32.Pt(float32(rect.Min.X), float32(rect.Min.Y)).Add(f32.Pt(float32(rect.Dx())*fac*0.5, float32(rect.Dx())*fac*0.5))
+	tStack := op.Affine(f32.Affine2D{}.Offset(pos).Scale(pos, f32.Pt(scale, scale))).Push(gtx.Ops)
+	img.Add(gtx.Ops)
+	paint.PaintOp{}.Add(gtx.Ops)
+	tStack.Pop()
 }

@@ -6,5 +6,6 @@ const (
 	ToolNone = iota
 	ToolPen
 	ToolPick
-	ToolBucket
+	ToolBucketConstrained
+	ToolBucketAll
 )
