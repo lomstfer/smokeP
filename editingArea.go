@@ -220,78 +220,79 @@ func (ea *EditingArea) CheckUndoRedo(gtx layout.Context) {
 }
 
 func (ea *EditingArea) UpdateTools(gtx layout.Context) {
-	for {
-		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
-			Name:  "1",
-		})
-		if !ok {
-			break
-		}
-		e, ok := ev.(key.Event)
-		if !ok {
-			continue
-		}
-		if e.State == key.Release {
-			continue
-		}
+	// conflicts with input fields
+	// for {
+	// 	ev, ok := gtx.Event(key.Filter{
+	// 		Focus: nil,
+	// 		Name:  "1",
+	// 	})
+	// 	if !ok {
+	// 		break
+	// 	}
+	// 	e, ok := ev.(key.Event)
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	if e.State == key.Release {
+	// 		continue
+	// 	}
 
-		ea.currentTool = pixeltools.ToolPen
-	}
-	for {
-		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
-			Name:  "2",
-		})
-		if !ok {
-			break
-		}
-		e, ok := ev.(key.Event)
-		if !ok {
-			continue
-		}
-		if e.State == key.Release {
-			continue
-		}
+	// 	ea.currentTool = pixeltools.ToolPen
+	// }
+	// for {
+	// 	ev, ok := gtx.Event(key.Filter{
+	// 		Focus: nil,
+	// 		Name:  "2",
+	// 	})
+	// 	if !ok {
+	// 		break
+	// 	}
+	// 	e, ok := ev.(key.Event)
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	if e.State == key.Release {
+	// 		continue
+	// 	}
 
-		ea.currentTool = pixeltools.ToolPick
-	}
-	for {
-		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
-			Name:  "3",
-		})
-		if !ok {
-			break
-		}
-		e, ok := ev.(key.Event)
-		if !ok {
-			continue
-		}
-		if e.State == key.Release {
-			continue
-		}
+	// 	ea.currentTool = pixeltools.ToolPick
+	// }
+	// for {
+	// 	ev, ok := gtx.Event(key.Filter{
+	// 		Focus: nil,
+	// 		Name:  "3",
+	// 	})
+	// 	if !ok {
+	// 		break
+	// 	}
+	// 	e, ok := ev.(key.Event)
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	if e.State == key.Release {
+	// 		continue
+	// 	}
 
-		ea.currentTool = pixeltools.ToolBucketConstrained
-	}
-	for {
-		ev, ok := gtx.Event(key.Filter{
-			Focus: nil,
-			Name:  "4",
-		})
-		if !ok {
-			break
-		}
-		e, ok := ev.(key.Event)
-		if !ok {
-			continue
-		}
-		if e.State == key.Release {
-			continue
-		}
+	// 	ea.currentTool = pixeltools.ToolBucketConstrained
+	// }
+	// for {
+	// 	ev, ok := gtx.Event(key.Filter{
+	// 		Focus: nil,
+	// 		Name:  "4",
+	// 	})
+	// 	if !ok {
+	// 		break
+	// 	}
+	// 	e, ok := ev.(key.Event)
+	// 	if !ok {
+	// 		continue
+	// 	}
+	// 	if e.State == key.Release {
+	// 		continue
+	// 	}
 
-		ea.currentTool = pixeltools.ToolBucketAll
-	}
+	// 	ea.currentTool = pixeltools.ToolBucketAll
+	// }
 
 	ea.justChoseTool = false
 	for {
