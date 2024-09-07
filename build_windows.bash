@@ -16,7 +16,10 @@ do
         flags+='-ldflags -H=windowsgui'
     fi
 
-    env GOOS=$GOOS GOARCH=$GOARCH go build $tags $flags -o "bin/"$output_name .
+    set GOOS=$GOOS
+    set GOARCH=$GOARCH
+
+    go build $tags $flags -o "bin/"$output_name .
     if [ $? -ne 0 ]; then
         echo 'An error occurred! Aborting the script execution...'
         exit 1
